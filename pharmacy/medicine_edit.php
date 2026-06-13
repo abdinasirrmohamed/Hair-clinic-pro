@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $price = (float) $_POST['unit_price'];
     $stmt->bind_param('ssidssi', $_POST['medicine_name'], $_POST['category'], $quantity, $price, $_POST['expiry_date'], $_POST['supplier'], $id);
     $stmt->execute();
+    log_activity('Updated medicine inventory', 'Pharmacy', $id);
     flash('success', 'Medicine updated successfully.');
     redirect('/pharmacy/medicines.php');
 }

@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare('UPDATE followups SET patient_id = ?, treatment_id = ?, followup_date = ?, result = ?, status = ? WHERE id = ?');
     $stmt->bind_param('iisssi', $patient_id, $treatment_id, $_POST['followup_date'], $_POST['result'], $_POST['status'], $id);
     $stmt->execute();
+    log_activity('Updated follow-up record', 'Follow-Ups', $id);
     flash('success', 'Follow-up result updated successfully.');
     redirect('/followups/view.php');
 }

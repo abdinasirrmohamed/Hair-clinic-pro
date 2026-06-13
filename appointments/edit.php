@@ -15,11 +15,18 @@ if (!$appt) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    [$slot_available, $slot_message] = doctor_slot_available((int) $_POST['doctor_id'], $_POST['appointment_date'], $_POST['appointment_time'], $id);
+    if (!$slot_available) {
+        flash('danger', $slot_message);
+        redirect('/appointments/edit.php?id=' . $id);
+    }
+
     $stmt = $conn->prepare('UPDATE appointments SET patient_id = ?, doctor_id = ?, appointment_date = ?, appointment_time = ?, reason = ?, status = ?, notes = ?, remarks = ? WHERE id = ?');
     $patient_id = (int) $_POST['patient_id'];
     $doctor_id = (int) $_POST['doctor_id'];
     $stmt->bind_param('iissssssi', $patient_id, $doctor_id, $_POST['appointment_date'], $_POST['appointment_time'], $_POST['reason'], $_POST['status'], $_POST['notes'], $_POST['remarks'], $id);
     $stmt->execute();
+    log_activity('Updated appointment', 'Appointments', $id);
     flash('success', 'Appointment updated successfully.');
     redirect('/appointments/view.php');
 }

@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dob = $_POST['date_of_birth'] ?: null;
     $stmt->bind_param('sssssss', $_POST['full_name'], $_POST['phone'], $_POST['email'], $_POST['gender'], $dob, $_POST['address'], $_POST['medical_notes']);
     $stmt->execute();
+    log_activity('Created patient record', 'Patients', $conn->insert_id);
     flash('success', 'Patient added successfully.');
     redirect('/patients/view.php');
 }

@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cost = (float) $_POST['cost'];
     $stmt->bind_param('isssdsi', $patient_id, $_POST['treatment_name'], $_POST['treatment_date'], $_POST['progress'], $cost, $_POST['notes'], $id);
     $stmt->execute();
+    log_activity('Updated treatment record', 'Treatments', $id);
     flash('success', 'Treatment progress updated successfully.');
     redirect('/treatments/view.php');
 }

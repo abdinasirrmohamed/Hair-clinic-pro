@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $appointment_date = $_POST['appointment_date'] ?? '';
     $appointment_time = $_POST['appointment_time'] ?? '';
     $reason = trim($_POST['reason'] ?? '');
-    $status = $_POST['status'] ?? 'Pending';
+    $status = 'Pending';
     $appointment_notes = trim($_POST['notes'] ?? '');
 
     try {
@@ -43,12 +43,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Please complete patient, doctor, date, time, and reason fields.');
         }
 
+        [$slot_available, $slot_message] = doctor_slot_available($doctor_id, $appointment_date, $appointment_time);
+        if (!$slot_available) {
+            throw new Exception($slot_message);
+        }
+
         $stmt = $conn->prepare('INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $stmt->bind_param('iisssss', $patient_id, $doctor_id, $appointment_date, $appointment_time, $reason, $status, $appointment_notes);
         $stmt->execute();
+        $appointment_id = (int) $conn->insert_id;
+        log_activity('Created appointment request', 'Appointments', $appointment_id);
 
         $conn->commit();
-        flash('success', $patient_mode === 'new' ? 'New patient registered and appointment booked successfully.' : 'Appointment booked successfully.');
+        flash('success', $patient_mode === 'new' ? 'New patient registered and appointment request sent to doctor.' : 'Appointment request sent to doctor for approval.');
         redirect('/appointments/view.php');
     } catch (Throwable $e) {
         $conn->rollback();
@@ -88,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="col-md-3"><label class="form-label">Date</label><input class="form-control" type="date" name="appointment_date" value="<?= e($prefill_date) ?>" required></div>
         <div class="col-md-3"><label class="form-label">Time</label><input class="form-control" type="time" name="appointment_time" required></div>
         <div class="col-md-8"><label class="form-label">Reason</label><input class="form-control" name="reason" required></div>
-        <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status"><option>Pending</option><option>Approved</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></div>
+        <div class="col-md-4"><label class="form-label">Workflow Status</label><input class="form-control" value="Pending doctor approval" disabled></div>
         <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="4"></textarea></div>
     </div>
     <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-calendar-check"></i> Save Appointment</button> <a class="btn btn-secondary" href="view.php">Cancel</a></div>

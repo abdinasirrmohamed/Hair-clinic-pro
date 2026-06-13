@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dob = $_POST['date_of_birth'] ?: null;
     $stmt->bind_param('sssssssi', $_POST['full_name'], $_POST['phone'], $_POST['email'], $_POST['gender'], $dob, $_POST['address'], $_POST['medical_notes'], $id);
     $stmt->execute();
+    log_activity('Updated patient record', 'Patients', $id);
     flash('success', 'Patient updated successfully.');
     redirect('/patients/view.php');
 }

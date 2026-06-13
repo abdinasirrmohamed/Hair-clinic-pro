@@ -6,5 +6,6 @@ $id = (int) ($_GET['id'] ?? 0);
 $stmt = $conn->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = ?");
 $stmt->bind_param('i', $id);
 $stmt->execute();
+log_activity('Cancelled appointment', 'Appointments', $id);
 flash('success', 'Appointment cancelled successfully.');
 redirect('/appointments/view.php');

@@ -47,14 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $locked_items = [];
         $subtotal = 0;
         foreach ($items as $item) {
-            $stmt = $conn->prepare('SELECT id, medicine_name, quantity, unit_price FROM medicines WHERE id = ? FOR UPDATE');
+            $stmt = $conn->prepare('SELECT id, medicine_name, quantity, unit_price, expiry_date FROM medicines WHERE id = ? FOR UPDATE');
             $medicine_id = (int) $item['medicine_id'];
             $stmt->bind_param('i', $medicine_id);
             $medicine = fetch_one($stmt);
             $quantity = (int) $item['quantity'];
-            if (!$medicine || (int) $medicine['quantity'] < $quantity) {
-                throw new Exception(($medicine['medicine_name'] ?? 'A prescribed medicine') . ' does not have enough stock.');
-            }
+            ensure_medicine_can_issue($medicine, $quantity);
             $line_total = (float) $medicine['unit_price'] * $quantity;
             $subtotal += $line_total;
             $locked_items[] = [
@@ -96,6 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare('UPDATE medicines SET quantity = quantity - ? WHERE id = ?');
             $stmt->bind_param('ii', $item['quantity'], $item['medicine_id']);
             $stmt->execute();
+
+            record_inventory_movement($item['medicine_id'], 'Pharmacy Sales', $item['quantity'], $item['unit_price'], [
+                'department' => 'Pharmacy',
+                'purpose' => 'Prescription dispense stock deduction',
+                'reference_type' => 'Prescription Sale',
+                'reference_id' => $sale_id,
+            ]);
         }
 
         $stmt = $conn->prepare("UPDATE prescriptions SET status = 'Dispensed' WHERE id = ?");
@@ -103,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
 
         $conn->commit();
+        log_activity('Dispensed prescription and processed sale', 'Pharmacy', $sale_id);
         flash('success', 'Prescription dispensed and pharmacy receipt generated.');
         redirect('/pharmacy/receipt.php?id=' . $sale_id);
     } catch (Throwable $e) {

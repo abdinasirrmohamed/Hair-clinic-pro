@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare('INSERT INTO followups (patient_id, treatment_id, followup_date, result, status) VALUES (?, ?, ?, ?, ?)');
     $stmt->bind_param('iisss', $patient_id, $treatment_id, $_POST['followup_date'], $_POST['result'], $_POST['status']);
     $stmt->execute();
+    log_activity('Created follow-up record', 'Follow-Ups', $conn->insert_id);
     flash('success', 'Follow-up saved successfully.');
     redirect('/followups/view.php');
 }

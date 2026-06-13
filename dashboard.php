@@ -10,6 +10,14 @@ $total_treatments = count_table($conn, 'SELECT COUNT(*) FROM treatments');
 $total_inventory_items = count_table($conn, 'SELECT COUNT(*) FROM inventory_items');
 $total_payments = count_table($conn, 'SELECT COALESCE(SUM(amount), 0) FROM payments');
 $total_medicines = count_table($conn, 'SELECT COUNT(*) FROM medicines');
+$revenue_today_total = (float) $conn->query("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payment_status IN ('Paid','Partial') AND DATE(created_at) = CURDATE()")->fetch_row()[0]
+    + (float) $conn->query("SELECT COALESCE(SUM(total_amount), 0) FROM pharmacy_sales WHERE status <> 'Returned' AND DATE(created_at) = CURDATE()")->fetch_row()[0];
+$revenue_month_total = (float) $conn->query("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payment_status IN ('Paid','Partial') AND YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())")->fetch_row()[0]
+    + (float) $conn->query("SELECT COALESCE(SUM(total_amount), 0) FROM pharmacy_sales WHERE status <> 'Returned' AND YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())")->fetch_row()[0]
+    + (float) $conn->query("SELECT COALESCE(SUM(cost), 0) FROM treatments WHERE YEAR(treatment_date) = YEAR(CURDATE()) AND MONTH(treatment_date) = MONTH(CURDATE())")->fetch_row()[0];
+$expenses_month_total = (float) $conn->query("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE YEAR(expense_date) = YEAR(CURDATE()) AND MONTH(expense_date) = MONTH(CURDATE())")->fetch_row()[0];
+$net_profit_month_total = $revenue_month_total - $expenses_month_total;
+$activity_today_total = count_table($conn, 'SELECT COUNT(*) FROM audit_logs WHERE DATE(created_at) = CURDATE()');
 $completed_treatments = count_table($conn, "SELECT COUNT(*) FROM treatments WHERE progress = 'Completed'");
 $pending_appointments = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Pending'");
 $today_appointments = count_table($conn, 'SELECT COUNT(*) FROM appointments WHERE appointment_date = CURDATE()');
@@ -18,11 +26,19 @@ $recently_registered = count_table($conn, "SELECT COUNT(*) FROM patients WHERE c
 $doctor_scope = doctor_patient_filter('p');
 $assigned_patients = count_table($conn, "SELECT COUNT(*) FROM patients p WHERE 1=1 $doctor_scope");
 $doctor_today_consultations = count_table($conn, "SELECT COUNT(*) FROM appointments a JOIN patients p ON p.id = a.patient_id WHERE a.appointment_date = CURDATE() $doctor_scope");
+$doctor_pending_approvals = count_table($conn, "SELECT COUNT(*) FROM appointments a JOIN patients p ON p.id = a.patient_id WHERE a.status = 'Pending' $doctor_scope");
+$doctor_approved_appointments = count_table($conn, "SELECT COUNT(*) FROM appointments a JOIN patients p ON p.id = a.patient_id WHERE a.status = 'Approved' $doctor_scope");
+$doctor_completed_appointments = count_table($conn, "SELECT COUNT(*) FROM appointments a JOIN patients p ON p.id = a.patient_id WHERE a.status = 'Completed' $doctor_scope");
 $doctor_completed_treatments = count_table($conn, "SELECT COUNT(*) FROM treatments t JOIN patients p ON p.id = t.patient_id WHERE t.progress = 'Completed' $doctor_scope");
 $pending_followups = count_table($conn, "SELECT COUNT(*) FROM followups f JOIN patients p ON p.id = f.patient_id WHERE f.status = 'Scheduled' $doctor_scope");
 $available_stock = count_table($conn, 'SELECT COALESCE(SUM(stock_level), 0) FROM inventory_items WHERE stock_level > 0');
 $low_stock_items = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level < 10');
-$expired_items = 0;
+$inventory_available_stock = count_table($conn, 'SELECT COALESCE(SUM(quantity), 0) FROM medicines');
+$inventory_low_stock_items = count_table($conn, 'SELECT COUNT(*) FROM medicines WHERE quantity <= reorder_level');
+$expired_items = count_table($conn, 'SELECT COUNT(*) FROM medicines WHERE expiry_date < CURDATE()');
+$inventory_stock_in_today = count_table($conn, "SELECT COALESCE(SUM(quantity), 0) FROM inventory_movements WHERE movement_type = 'Stock In' AND DATE(movement_date) = CURDATE()");
+$inventory_stock_out_today = count_table($conn, "SELECT COALESCE(SUM(quantity), 0) FROM inventory_movements WHERE movement_type IN ('Stock Out','Pharmacy Sales','Treatment Consumption') AND DATE(movement_date) = CURDATE()");
+$inventory_value_total = (float) $conn->query('SELECT COALESCE(SUM(quantity * unit_price), 0) FROM medicines')->fetch_row()[0];
 $pharmacy_sales_today = count_table($conn, 'SELECT COUNT(*) FROM pharmacy_sales WHERE DATE(created_at) = CURDATE()');
 $pharmacy_revenue_today = (float) $conn->query('SELECT COALESCE(SUM(total_amount), 0) FROM pharmacy_sales WHERE DATE(created_at) = CURDATE()')->fetch_row()[0];
 $pending_prescriptions_count = count_table($conn, "SELECT COUNT(*) FROM prescriptions WHERE status = 'Pending'");
@@ -43,6 +59,10 @@ $dashboard_profiles = [
             ['label' => 'Total Appointments', 'value' => $total_appointments, 'icon' => 'bi-calendar3', 'tone' => 'blue', 'chip' => 'Live', 'chipTone' => 'neutral'],
             ['label' => 'Total Treatments', 'value' => $total_treatments, 'icon' => 'bi-scissors', 'tone' => 'mint', 'chip' => 'Clinical', 'chipTone' => 'neutral'],
             ['label' => 'Inventory Items', 'value' => $total_inventory_items, 'icon' => 'bi-archive', 'tone' => 'blue', 'chip' => 'Stock', 'chipTone' => 'neutral'],
+            ['label' => 'Revenue Today', 'value' => $revenue_today_total, 'icon' => 'bi-cash-stack', 'tone' => 'mint', 'chip' => 'Finance', 'chipTone' => 'green'],
+            ['label' => 'Monthly Expenses', 'value' => $expenses_month_total, 'icon' => 'bi-receipt-cutoff', 'tone' => 'red', 'chip' => 'Costs', 'chipTone' => 'red'],
+            ['label' => 'Net Profit This Month', 'value' => $net_profit_month_total, 'icon' => 'bi-pie-chart', 'tone' => $net_profit_month_total >= 0 ? 'mint' : 'red', 'chip' => 'P&L', 'chipTone' => $net_profit_month_total >= 0 ? 'green' : 'red'],
+            ['label' => 'Activities Today', 'value' => $activity_today_total, 'icon' => 'bi-shield-check', 'tone' => 'blue', 'chip' => 'Audit', 'chipTone' => 'neutral'],
             ['label' => 'System Activity Overview', 'value' => $system_activity, 'icon' => 'bi-activity', 'tone' => 'mint', 'chip' => 'All Modules', 'chipTone' => 'green'],
         ],
     ],
@@ -63,6 +83,9 @@ $dashboard_profiles = [
         'metrics' => [
             ['label' => 'Assigned Patients', 'value' => $assigned_patients, 'icon' => 'bi-person-lines-fill', 'tone' => 'blue', 'chip' => 'Assigned', 'chipTone' => 'green'],
             ['label' => "Today's Consultations", 'value' => $doctor_today_consultations, 'icon' => 'bi-clipboard-pulse', 'tone' => 'mint', 'chip' => 'Today', 'chipTone' => 'neutral'],
+            ['label' => 'Pending Approvals', 'value' => $doctor_pending_approvals, 'icon' => 'bi-hourglass-split', 'tone' => 'red', 'chip' => 'Review', 'chipTone' => 'red'],
+            ['label' => 'Approved Appointments', 'value' => $doctor_approved_appointments, 'icon' => 'bi-calendar-check', 'tone' => 'blue', 'chip' => 'Approved', 'chipTone' => 'green'],
+            ['label' => 'Completed Appointments', 'value' => $doctor_completed_appointments, 'icon' => 'bi-check2-circle', 'tone' => 'mint', 'chip' => 'Done', 'chipTone' => 'green'],
             ['label' => 'Completed Treatments', 'value' => $doctor_completed_treatments, 'icon' => 'bi-check-circle', 'tone' => 'mint', 'chip' => 'Done', 'chipTone' => 'green'],
             ['label' => 'Pending Follow-Ups', 'value' => $pending_followups, 'icon' => 'bi-clipboard2-check', 'tone' => 'red', 'chip' => 'Pending', 'chipTone' => 'red'],
         ],
@@ -72,9 +95,12 @@ $dashboard_profiles = [
         'subtitle' => 'Stock levels, low stock alerts, and order monitoring.',
         'metrics' => [
             ['label' => 'Total Inventory Items', 'value' => $total_inventory_items, 'icon' => 'bi-archive', 'tone' => 'blue', 'chip' => 'Items', 'chipTone' => 'neutral'],
-            ['label' => 'Available Stock', 'value' => $available_stock, 'icon' => 'bi-box-seam', 'tone' => 'mint', 'chip' => 'Units', 'chipTone' => 'green'],
-            ['label' => 'Low Stock Items', 'value' => $low_stock_items, 'icon' => 'bi-exclamation-triangle', 'tone' => 'red', 'chip' => 'Alert', 'chipTone' => 'red'],
+            ['label' => 'Available Stock', 'value' => $inventory_available_stock, 'icon' => 'bi-box-seam', 'tone' => 'mint', 'chip' => 'Units', 'chipTone' => 'green'],
+            ['label' => 'Low Stock Items', 'value' => $inventory_low_stock_items, 'icon' => 'bi-exclamation-triangle', 'tone' => 'red', 'chip' => 'Alert', 'chipTone' => 'red'],
             ['label' => 'Expired Items', 'value' => $expired_items, 'icon' => 'bi-calendar2-x', 'tone' => 'red', 'chip' => 'Monitor', 'chipTone' => 'neutral'],
+            ['label' => 'Stock In Today', 'value' => $inventory_stock_in_today, 'icon' => 'bi-box-arrow-in-down', 'tone' => 'mint', 'chip' => 'Today', 'chipTone' => 'green'],
+            ['label' => 'Stock Out Today', 'value' => $inventory_stock_out_today, 'icon' => 'bi-box-arrow-up', 'tone' => 'blue', 'chip' => 'Today', 'chipTone' => 'neutral'],
+            ['label' => 'Inventory Value', 'value' => $inventory_value_total, 'icon' => 'bi-cash-coin', 'tone' => 'mint', 'chip' => 'Value', 'chipTone' => 'green'],
             ['label' => 'Medicines', 'value' => $total_medicines, 'icon' => 'bi-capsule', 'tone' => 'mint', 'chip' => 'Pharmacy', 'chipTone' => 'green'],
         ],
     ],
@@ -222,14 +248,15 @@ function appointment_status_class($status)
 
             <div class="metric-grid">
                 <?php foreach ($profile['metrics'] as $metric): ?>
-                    <?php $metric_value = stripos($metric['label'], 'Revenue') !== false || stripos($metric['label'], 'Payments') !== false ? '$' . number_format((float) $metric['value'], 2) : number_format((int) $metric['value']); ?>
-                    <article class="metric-card">
+                    <?php $is_money_metric = stripos($metric['label'], 'Revenue') !== false || stripos($metric['label'], 'Payments') !== false || stripos($metric['label'], 'Expenses') !== false || stripos($metric['label'], 'Profit') !== false || stripos($metric['label'], 'Value') !== false; ?>
+                    <?php $metric_value = $is_money_metric ? '$' . number_format((float) $metric['value'], 2) : number_format((int) $metric['value']); ?>
+                    <article class="metric-card" data-metric-label="<?= e($metric['label']) ?>">
                         <div class="metric-top">
                             <span class="metric-icon <?= e($metric['tone']) ?>"><i class="bi <?= e($metric['icon']) ?>"></i></span>
                             <span class="metric-chip <?= e($metric['chipTone']) ?>"><?= e($metric['chip']) ?></span>
                         </div>
                         <p><?= e($metric['label']) ?></p>
-                        <strong><?= e($metric_value) ?></strong>
+                        <strong data-metric-value><?= e($metric_value) ?></strong>
                     </article>
                 <?php endforeach; ?>
             </div>
@@ -313,6 +340,41 @@ function appointment_status_class($status)
                         </div>
                     </div>
                 </section>
+            <?php elseif (current_role() === 'Inventory Officer'): ?>
+                <section class="patient-management-card">
+                    <div class="patient-tabs"><div class="tab-links"><a class="active" href="<?= BASE_URL ?>/inventory/medicines.php">Inventory Items</a><a href="<?= BASE_URL ?>/inventory/purchase.php">Purchase</a><a href="<?= BASE_URL ?>/inventory/stock_in.php">Stock In</a><a href="<?= BASE_URL ?>/inventory/stock_out.php">Stock Out</a><a href="<?= BASE_URL ?>/inventory/suppliers.php">Suppliers</a><a href="<?= BASE_URL ?>/inventory/reports.php">Reports</a></div></div>
+                    <div class="p-4">
+                        <div class="row g-3">
+                            <div class="col-md-3"><a class="btn btn-primary w-100 py-3" href="<?= BASE_URL ?>/inventory/medicine_form.php"><i class="bi bi-plus-lg"></i> Add New Medicine</a></div>
+                            <div class="col-md-3"><a class="btn btn-outline-primary w-100 py-3" href="<?= BASE_URL ?>/inventory/purchase.php"><i class="bi bi-box-arrow-in-down"></i> Create Purchase</a></div>
+                            <div class="col-md-3"><a class="btn btn-outline-primary w-100 py-3" href="<?= BASE_URL ?>/inventory/stock_out.php"><i class="bi bi-box-arrow-up"></i> Create Stock Out</a></div>
+                            <div class="col-md-3"><a class="btn btn-outline-secondary w-100 py-3" href="<?= BASE_URL ?>/inventory/reports.php"><i class="bi bi-file-earmark-bar-graph"></i> Inventory Reports</a></div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="row g-4 mt-1">
+                    <div class="col-lg-6">
+                        <section class="form-panel h-100">
+                            <h2 class="h5 mb-3">Low Stock Warnings</h2>
+                            <?php $dashboard_low_stock = $conn->query('SELECT medicine_name, quantity, reorder_level FROM medicines WHERE quantity <= reorder_level ORDER BY quantity ASC LIMIT 8')->fetch_all(MYSQLI_ASSOC); ?>
+                            <?php foreach ($dashboard_low_stock as $item): ?>
+                                <div class="d-flex justify-content-between border-bottom py-2"><span><strong><?= e($item['medicine_name']) ?></strong><small class="d-block text-muted">Reorder level <?= number_format((int) $item['reorder_level']) ?></small></span><em class="status-pill inactive"><?= number_format((int) $item['quantity']) ?> left</em></div>
+                            <?php endforeach; ?>
+                            <?php if (!$dashboard_low_stock): ?><div class="empty-state">No low stock warnings.</div><?php endif; ?>
+                        </section>
+                    </div>
+                    <div class="col-lg-6">
+                        <section class="form-panel h-100">
+                            <h2 class="h5 mb-3">Expiry Alerts</h2>
+                            <?php $dashboard_expiry = $conn->query('SELECT medicine_name, batch_number, expiry_date FROM medicines WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY expiry_date ASC LIMIT 8')->fetch_all(MYSQLI_ASSOC); ?>
+                            <?php foreach ($dashboard_expiry as $item): ?>
+                                <div class="d-flex justify-content-between border-bottom py-2"><span><strong><?= e($item['medicine_name']) ?></strong><small class="d-block text-muted"><?= e($item['batch_number'] ?: 'No batch') ?></small></span><em class="status-pill inactive"><?= e(date('M j, Y', strtotime($item['expiry_date']))) ?></em></div>
+                            <?php endforeach; ?>
+                            <?php if (!$dashboard_expiry): ?><div class="empty-state">No expiry alerts.</div><?php endif; ?>
+                        </section>
+                    </div>
+                </div>
             <?php else: ?>
             <div class="dashboard-grid">
                 <section class="recent-panel">
@@ -375,13 +437,31 @@ function appointment_status_class($status)
                     <section class="inventory-alert">
                         <h2>Inventory Alert</h2>
                         <p>FUE Graft Preservation Solution is running low. Restock recommended by Friday.</p>
-                        <a href="<?= BASE_URL ?>/inventory/index.php">Order Now</a>
+                        <a href="<?= BASE_URL ?>/inventory/purchase.php">Order Now</a>
                     </section>
                 <?php endif; ?>
             </div>
             <?php endif; ?>
         </main>
     </section>
+    <script>
+    async function refreshDashboardMetrics() {
+        try {
+            const response = await fetch('<?= BASE_URL ?>/api/dashboard_metrics.php', { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) return;
+            const data = await response.json();
+            document.querySelectorAll('[data-metric-label]').forEach((card) => {
+                const label = card.dataset.metricLabel;
+                if (Object.prototype.hasOwnProperty.call(data.metrics, label)) {
+                    card.querySelector('[data-metric-value]').textContent = data.metrics[label];
+                }
+            });
+        } catch (error) {
+            console.warn('Dashboard refresh skipped', error);
+        }
+    }
+    setInterval(refreshDashboardMetrics, 30000);
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

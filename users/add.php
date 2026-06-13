@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('sssss', $username, $hash, $full_name, $role, $status);
         try {
             $stmt->execute();
+            log_activity('Created user account', 'Users', $conn->insert_id);
             flash('success', 'User created successfully.');
             redirect('/users/view.php');
         } catch (mysqli_sql_exception $e) {

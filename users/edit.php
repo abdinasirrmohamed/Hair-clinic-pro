@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_name'] = $full_name;
                     $_SESSION['admin_role'] = $role;
                 }
+                log_activity('Updated user account', 'Users', $id);
                 flash('success', 'User updated successfully.');
                 redirect('/users/view.php');
             } catch (mysqli_sql_exception $e) {

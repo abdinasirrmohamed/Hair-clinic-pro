@@ -24,10 +24,10 @@ function role_key($role = null)
 function role_permissions()
 {
     return [
-        'Administrator' => ['dashboard', 'users', 'doctors', 'patients', 'appointments', 'doctor_appointments', 'payments', 'treatments', 'followups', 'inventory', 'pharmacy', 'prescriptions', 'reports'],
+        'Administrator' => ['dashboard', 'users', 'doctors', 'patients', 'appointments', 'doctor_appointments', 'payments', 'finance', 'audit_logs', 'treatments', 'followups', 'inventory', 'pharmacy', 'prescriptions', 'reports'],
         'Receptionist' => ['dashboard', 'patients', 'appointments', 'payments', 'reports'],
         'Doctor' => ['dashboard', 'patients', 'doctor_appointments', 'treatments', 'followups', 'prescriptions', 'reports'],
-        'Inventory Officer' => ['dashboard', 'inventory', 'pharmacy', 'reports'],
+        'Inventory Officer' => ['dashboard', 'inventory'],
         'Pharmacy User' => ['dashboard', 'pharmacy', 'reports'],
     ];
 }
@@ -35,10 +35,10 @@ function role_permissions()
 function report_permissions()
 {
     return [
-        'Administrator' => ['users', 'patients', 'appointments', 'treatments', 'followups', 'consultations', 'medical_history', 'inventory', 'stock_in', 'stock_out', 'low_stock', 'expired', 'payments', 'pharmacy', 'pharmacy_sales', 'prescriptions', 'top_medicines', 'inventory_movement', 'doctor_performance', 'activity'],
+        'Administrator' => ['users', 'patients', 'appointments', 'treatments', 'followups', 'consultations', 'medical_history', 'inventory', 'stock_in', 'stock_out', 'low_stock', 'expired', 'payments', 'finance', 'expenses', 'profit_loss', 'audit_logs', 'pharmacy', 'pharmacy_sales', 'prescriptions', 'top_medicines', 'inventory_movement', 'doctor_performance', 'activity'],
         'Receptionist' => ['patients', 'appointments', 'payments'],
         'Doctor' => ['treatments', 'followups', 'consultations', 'medical_history'],
-        'Inventory Officer' => ['inventory', 'stock_in', 'stock_out', 'low_stock', 'expired', 'pharmacy'],
+        'Inventory Officer' => ['inventory', 'stock_in', 'stock_out', 'low_stock', 'expired', 'inventory_movement'],
         'Pharmacy User' => ['pharmacy', 'pharmacy_sales', 'prescriptions', 'top_medicines', 'low_stock', 'expired', 'inventory_movement'],
     ];
 }
@@ -114,12 +114,14 @@ function role_menu_items()
         ['module' => 'appointments', 'href' => '/appointments/view.php', 'icon' => 'bi-calendar3', 'label' => 'Appointments'],
         ['module' => 'doctor_appointments', 'href' => '/doctor_appointments/view.php', 'icon' => 'bi-calendar-check', 'label' => 'My Appointments'],
         ['module' => 'payments', 'href' => '/payments/view.php', 'icon' => 'bi-credit-card', 'label' => 'Payments'],
+        ['module' => 'finance', 'href' => '/finance/index.php', 'icon' => 'bi-cash-coin', 'label' => 'Finance'],
         ['module' => 'treatments', 'href' => '/treatments/view.php', 'icon' => 'bi-scissors', 'label' => 'Treatments'],
         ['module' => 'followups', 'href' => '/followups/view.php', 'icon' => 'bi-clipboard2-check', 'label' => 'Follow-Ups'],
         ['module' => 'prescriptions', 'href' => '/prescriptions/view.php', 'icon' => 'bi-prescription2', 'label' => 'Prescriptions'],
-        ['module' => 'inventory', 'href' => '/inventory/index.php', 'icon' => 'bi-archive', 'label' => 'Inventory'],
+        ['module' => 'inventory', 'href' => '/inventory/medicines.php', 'icon' => 'bi-archive', 'label' => 'Inventory'],
         ['module' => 'pharmacy', 'href' => '/pharmacy/medicines.php', 'icon' => 'bi-capsule', 'label' => 'Pharmacy'],
         ['module' => 'reports', 'href' => '/reports/index.php', 'icon' => 'bi-graph-up', 'label' => 'Reports'],
+        ['module' => 'audit_logs', 'href' => '/audit_logs/index.php', 'icon' => 'bi-shield-lock', 'label' => 'Audit Logs'],
     ];
 
     return array_values(array_filter($items, fn($item) => can_access($item['module'])));
@@ -133,9 +135,6 @@ function render_role_sidebar($current_path = '')
         echo '<a class="' . e($active) . '" href="' . BASE_URL . e($item['href']) . '"><i class="bi ' . e($item['icon']) . '"></i><span>' . e($item['label']) . '</span></a>';
     }
     echo '</nav></div><div class="side-bottom">';
-    if (can_access('appointments')) {
-        echo '<a class="new-appointment" href="' . BASE_URL . '/appointments/add.php"><i class="bi bi-plus-lg"></i><span>New Appointment</span></a>';
-    }
     echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div></aside>';
 }
 
@@ -153,6 +152,12 @@ function require_login()
 function redirect_if_logged_in()
 {
     if (is_logged_in()) {
+        if (current_role() === 'Inventory Officer') {
+            redirect('/inventory/medicines.php');
+        }
+        if (current_role() === 'Pharmacy User') {
+            redirect('/pharmacy/medicines.php');
+        }
         redirect('/dashboard.php');
     }
 }

@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('isssssssisssi', $user_id, $full_name, $specialization, $qualification, $phone, $email, $license_number, $photo, $experience_years, $availability_schedule, $bio, $status, $id);
         try {
             $stmt->execute();
+            log_activity('Updated doctor record', 'Doctors', $id);
             flash('success', 'Doctor updated successfully.');
             redirect('/doctors/view.php');
         } catch (mysqli_sql_exception $e) {

@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $price = (float) $_POST['unit_price'];
     $stmt->bind_param('ssidss', $_POST['medicine_name'], $_POST['category'], $quantity, $price, $_POST['expiry_date'], $_POST['supplier']);
     $stmt->execute();
+    log_activity('Added medicine inventory', 'Pharmacy', $conn->insert_id);
     flash('success', 'Medicine added successfully.');
     redirect('/pharmacy/medicines.php');
 }

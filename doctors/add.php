@@ -38,6 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('isssssssisss', $user_id, $full_name, $specialization, $qualification, $phone, $email, $license_number, $photo, $experience_years, $availability_schedule, $bio, $status);
         try {
             $stmt->execute();
+            $doctor_id = (int) $conn->insert_id;
+            $days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            foreach ($days as $day) {
+                $is_working = in_array($day, ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'], true) ? 1 : 0;
+                $schedule = $conn->prepare('INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time, slot_minutes, is_working) VALUES (?, ?, "08:00:00", "16:00:00", 30, ?)');
+                $schedule->bind_param('isi', $doctor_id, $day, $is_working);
+                $schedule->execute();
+            }
+            log_activity('Created doctor record', 'Doctors', $doctor_id);
             flash('success', 'Doctor added successfully.');
             redirect('/doctors/view.php');
         } catch (mysqli_sql_exception $e) {

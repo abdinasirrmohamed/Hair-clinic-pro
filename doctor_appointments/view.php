@@ -17,11 +17,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/doctor_appointments/view.php');
     }
 
-    $stmt = $conn->prepare('UPDATE appointments SET status = ?, remarks = ? WHERE id = ? AND doctor_id = ?');
+    $timestamp_column = $status === 'Approved' ? 'approved_at' : ($status === 'Rejected' ? 'rejected_at' : 'completed_at');
+    $stmt = $conn->prepare("UPDATE appointments SET status = ?, remarks = ?, `$timestamp_column` = NOW() WHERE id = ? AND doctor_id = ?");
     $stmt->bind_param('ssii', $status, $remarks, $appointment_id, $doctor_id);
     $stmt->execute();
+    log_activity($status . ' appointment', 'Appointments', $appointment_id);
     flash('success', 'Appointment updated successfully.');
     redirect('/doctor_appointments/view.php');
+}
+
+$filter = $_GET['filter'] ?? 'all';
+$where_filter = '';
+if ($filter === 'pending') {
+    $where_filter = " AND a.status = 'Pending'";
+} elseif ($filter === 'today') {
+    $where_filter = ' AND a.appointment_date = CURDATE()';
+} elseif ($filter === 'upcoming') {
+    $where_filter = " AND a.appointment_date >= CURDATE() AND a.status IN ('Pending','Approved')";
+} elseif ($filter === 'history') {
+    $where_filter = " AND (a.appointment_date < CURDATE() OR a.status IN ('Completed','Rejected','Cancelled'))";
 }
 
 if ($doctor_id > 0) {
@@ -30,12 +44,19 @@ if ($doctor_id > 0) {
          FROM appointments a
          JOIN patients p ON p.id = a.patient_id
          WHERE a.doctor_id = ?
+         ' . $where_filter . '
          ORDER BY a.appointment_date DESC, a.appointment_time DESC'
     );
     $stmt->bind_param('i', $doctor_id);
     $appointments = fetch_all($stmt);
+
+    $today_count = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE doctor_id = $doctor_id AND appointment_date = CURDATE()");
+    $pending_count = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE doctor_id = $doctor_id AND status = 'Pending'");
+    $approved_count = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE doctor_id = $doctor_id AND status = 'Approved'");
+    $completed_count = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE doctor_id = $doctor_id AND status = 'Completed'");
 } else {
     $appointments = [];
+    $today_count = $pending_count = $approved_count = $completed_count = 0;
 }
 ?>
 <div class="patient-head">
@@ -43,6 +64,7 @@ if ($doctor_id > 0) {
         <h1>My Appointments</h1>
         <p>Review appointment requests, approve or reject bookings, and mark completed visits.</p>
     </div>
+    <a class="add-patient-btn" href="schedule.php"><i class="bi bi-clock"></i>Manage Schedule</a>
 </div>
 
 <?php if (!$doctor_id): ?>
@@ -52,8 +74,19 @@ if ($doctor_id > 0) {
 <section class="patient-management-card">
     <div class="patient-tabs">
         <div class="tab-links">
-            <a class="active" href="view.php">All Appointments</a>
+            <a class="<?= $filter === 'all' ? 'active' : '' ?>" href="view.php">All Appointments</a>
+            <a class="<?= $filter === 'pending' ? 'active' : '' ?>" href="view.php?filter=pending">Pending Approvals</a>
+            <a class="<?= $filter === 'today' ? 'active' : '' ?>" href="view.php?filter=today">Today's Schedule</a>
+            <a class="<?= $filter === 'upcoming' ? 'active' : '' ?>" href="view.php?filter=upcoming">Upcoming</a>
+            <a class="<?= $filter === 'history' ? 'active' : '' ?>" href="view.php?filter=history">History</a>
+            <a href="schedule.php">Schedule</a>
         </div>
+    </div>
+    <div class="patient-metrics p-4 pb-0">
+        <article class="patient-metric"><div><p>Today's Appointments</p><strong><?= number_format($today_count) ?></strong></div><span class="metric-icon blue"><i class="bi bi-calendar-day"></i></span></article>
+        <article class="patient-metric"><div><p>Pending Approvals</p><strong><?= number_format($pending_count) ?></strong></div><span class="metric-icon red"><i class="bi bi-hourglass-split"></i></span></article>
+        <article class="patient-metric"><div><p>Approved Appointments</p><strong><?= number_format($approved_count) ?></strong></div><span class="metric-icon mint"><i class="bi bi-check2-circle"></i></span></article>
+        <article class="patient-metric"><div><p>Completed Appointments</p><strong><?= number_format($completed_count) ?></strong></div><span class="metric-icon blue"><i class="bi bi-clipboard-check"></i></span></article>
     </div>
     <div class="patient-list-grid patient-list-head" style="grid-template-columns: 1.25fr 1fr 1.3fr .8fr 1.4fr;">
         <span>Patient</span>

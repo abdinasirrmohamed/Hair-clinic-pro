@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['admin_name'] = $user['full_name'];
         $_SESSION['admin_role'] = $user['role'];
+        log_activity('Login', 'Authentication', $user['id']);
         redirect('/pharmacy/medicines.php');
     }
 

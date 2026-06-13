@@ -14,5 +14,6 @@ if ($followup) {
 $stmt = $conn->prepare('DELETE FROM followups WHERE id = ?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
+log_activity('Deleted follow-up record', 'Follow-Ups', $id);
 flash('success', 'Follow-up deleted successfully.');
 redirect('/followups/view.php');

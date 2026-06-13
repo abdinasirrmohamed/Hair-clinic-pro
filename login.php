@@ -18,8 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $admin['id'];
         $_SESSION['admin_name'] = $admin['full_name'];
         $_SESSION['admin_role'] = $admin['role'];
+        log_activity('Login', 'Authentication', $admin['id']);
         if ($admin['role'] === 'Pharmacy User') {
             redirect('/pharmacy/medicines.php');
+        }
+        if ($admin['role'] === 'Inventory Officer') {
+            redirect('/inventory/medicines.php');
         }
         redirect('/dashboard.php');
     }

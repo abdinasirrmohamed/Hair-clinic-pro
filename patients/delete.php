@@ -6,5 +6,6 @@ $id = (int) ($_GET['id'] ?? 0);
 $stmt = $conn->prepare('DELETE FROM patients WHERE id = ?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
+log_activity('Deleted patient record', 'Patients', $id);
 flash('success', 'Patient deleted successfully.');
 redirect('/patients/view.php');

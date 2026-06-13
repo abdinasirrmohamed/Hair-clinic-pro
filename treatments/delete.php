@@ -14,5 +14,6 @@ if ($treatment) {
 $stmt = $conn->prepare('DELETE FROM treatments WHERE id = ?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
+log_activity('Deleted treatment record', 'Treatments', $id);
 flash('success', 'Treatment record deleted successfully.');
 redirect('/treatments/view.php');

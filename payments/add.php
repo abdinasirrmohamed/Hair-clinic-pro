@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare('INSERT INTO receipts (payment_id, receipt_number) VALUES (?, ?)');
     $stmt->bind_param('is', $payment_id, $receipt_number);
     $stmt->execute();
+    log_activity('Recorded patient payment', 'Payments', $payment_id);
     flash('success', 'Payment recorded and receipt generated.');
     redirect('/payments/receipt.php?id=' . $payment_id);
 }

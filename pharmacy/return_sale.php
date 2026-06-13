@@ -29,12 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $medicine_id = (int) $item['medicine_id'];
             $stmt->bind_param('ii', $qty, $medicine_id);
             $stmt->execute();
+            record_inventory_movement($medicine_id, 'Inventory Adjustment', $qty, 0, [
+                'department' => 'Pharmacy',
+                'purpose' => 'Returned sale stock restored',
+                'reference_type' => 'Pharmacy Return',
+                'reference_id' => $id,
+            ]);
         }
 
         $stmt = $conn->prepare("UPDATE pharmacy_sales SET status = 'Returned', returned_at = NOW(), return_reason = ? WHERE id = ?");
         $stmt->bind_param('si', $reason, $id);
         $stmt->execute();
         $conn->commit();
+        log_activity('Returned pharmacy sale', 'Pharmacy', $id);
         flash('success', 'Sale returned and medicine stock restored.');
         redirect('/pharmacy/sales_history.php');
     } catch (Throwable $e) {

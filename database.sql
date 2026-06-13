@@ -1,6 +1,9 @@
 CREATE DATABASE IF NOT EXISTS hair_clinic_system;
 USE hair_clinic_system;
 
+-- For a full demo dataset after importing this schema, run:
+-- C:\xampp\php\php.exe tools\seed_demo_data.php
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
@@ -52,9 +55,37 @@ CREATE TABLE IF NOT EXISTS appointments (
     status ENUM('Pending','Approved','Rejected','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
     notes TEXT,
     remarks TEXT,
+    approved_at DATETIME NULL,
+    rejected_at DATETIME NULL,
+    completed_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
     FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS doctor_schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    doctor_id INT NOT NULL,
+    day_of_week ENUM('Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday') NOT NULL,
+    start_time TIME NOT NULL DEFAULT '08:00:00',
+    end_time TIME NOT NULL DEFAULT '16:00:00',
+    slot_minutes INT NOT NULL DEFAULT 30,
+    is_working TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_doctor_day (doctor_id, day_of_week),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS doctor_blocked_dates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    doctor_id INT NOT NULL,
+    block_date DATE NOT NULL,
+    block_type ENUM('Leave','Blocked') NOT NULL DEFAULT 'Blocked',
+    reason VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_doctor_block_date (doctor_id, block_date),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS treatments (
@@ -146,15 +177,87 @@ CREATE TABLE IF NOT EXISTS receipts (
     FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category ENUM('Staff Salaries','Medical Supplies','Medicine Purchases','Rent','Electricity','Water','Internet','Equipment Maintenance','Other Expenses') NOT NULL,
+    expense_date DATE NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    vendor VARCHAR(150),
+    description TEXT,
+    receipt_path VARCHAR(255),
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX expense_date_idx (expense_date),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    user_name VARCHAR(150) NOT NULL,
+    user_role VARCHAR(80) NOT NULL,
+    action VARCHAR(150) NOT NULL,
+    module_name VARCHAR(80) NOT NULL,
+    record_id VARCHAR(80),
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX audit_created_at_idx (created_at),
+    INDEX audit_module_idx (module_name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS medicines (
     id INT AUTO_INCREMENT PRIMARY KEY,
     medicine_name VARCHAR(150) NOT NULL,
+    generic_name VARCHAR(150) NULL,
     category VARCHAR(100) NOT NULL,
+    batch_number VARCHAR(100) NULL,
+    barcode VARCHAR(100) NULL,
     quantity INT NOT NULL DEFAULT 0,
     unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    supplier_id INT NULL,
     expiry_date DATE NOT NULL,
+    manufacturing_date DATE NULL,
+    reorder_level INT NOT NULL DEFAULT 10,
     supplier VARCHAR(150) NOT NULL,
+    description TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS suppliers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_name VARCHAR(150) NOT NULL,
+    contact_person VARCHAR(150),
+    phone VARCHAR(40) NOT NULL,
+    email VARCHAR(150),
+    address VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_supplier_company (company_name)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_movements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_number VARCHAR(50) NOT NULL,
+    medicine_id INT NOT NULL,
+    movement_type ENUM('Stock In','Stock Out','Pharmacy Sales','Treatment Consumption','Inventory Adjustment') NOT NULL,
+    quantity INT NOT NULL,
+    unit_cost DECIMAL(10,2) NOT NULL DEFAULT 0,
+    total_cost DECIMAL(10,2) NOT NULL DEFAULT 0,
+    supplier_id INT NULL,
+    department VARCHAR(120),
+    purpose VARCHAR(255),
+    reference_type VARCHAR(80),
+    reference_id INT NULL,
+    invoice_path VARCHAR(255),
+    issued_by INT NULL,
+    movement_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX movement_date_idx (movement_date),
+    INDEX movement_type_idx (movement_type),
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
+    FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS pharmacy_invoices (
@@ -342,6 +445,17 @@ UPDATE appointments
 SET doctor_id = (SELECT id FROM doctors WHERE license_number = 'HC-MD-1001' LIMIT 1)
 WHERE doctor_id IS NULL;
 
+INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time, slot_minutes, is_working)
+SELECT d.id, days.day_name, '08:00:00', '16:00:00', 30, IF(days.day_name IN ('Saturday','Sunday','Monday','Tuesday','Wednesday'), 1, 0)
+FROM doctors d
+JOIN (
+    SELECT 'Saturday' day_name UNION ALL SELECT 'Sunday' UNION ALL SELECT 'Monday' UNION ALL SELECT 'Tuesday'
+    UNION ALL SELECT 'Wednesday' UNION ALL SELECT 'Thursday' UNION ALL SELECT 'Friday'
+) days
+WHERE NOT EXISTS (
+    SELECT 1 FROM doctor_schedules ds WHERE ds.doctor_id = d.id AND ds.day_of_week = days.day_name
+);
+
 INSERT INTO followups (id, patient_id, treatment_id, followup_date, result, status, created_at) VALUES
 (1, 1, 1, '2023-11-22', 'Week 4 review: scalp healing well. Recipient site redness has subsided significantly.', 'Done', '2023-11-22 11:40:00'),
 (2, 1, 1, '2023-12-20', 'Week 8 update: patient reporting minimal discomfort and good medication adherence.', 'Done', '2023-12-20 10:15:00'),
@@ -369,6 +483,17 @@ quantity = VALUES(quantity),
 unit_price = VALUES(unit_price),
 expiry_date = VALUES(expiry_date),
 supplier = VALUES(supplier);
+
+INSERT INTO suppliers (company_name, contact_person, phone, email, address) VALUES
+('ClinicSupplies Co.', 'Supply Desk', '+252 61 220 1000', 'supplies@clinic.test', 'Mogadishu Medical Market'),
+('MediCare Pharma', 'Pharma Account', '+252 61 220 2000', 'orders@medicare.test', 'KM4, Mogadishu'),
+('BioMed Logistics', 'Logistics Desk', '+252 61 220 3000', 'dispatch@biomed.test', 'Industrial Road, Mogadishu')
+ON DUPLICATE KEY UPDATE company_name = VALUES(company_name);
+
+UPDATE medicines m
+LEFT JOIN suppliers s ON s.company_name = m.supplier
+SET m.supplier_id = s.id
+WHERE m.supplier_id IS NULL AND s.id IS NOT NULL;
 
 INSERT INTO prescriptions (id, prescription_number, patient_id, doctor_id, prescription_date, status, instructions, created_at)
 SELECT 1, 'RX-20231106-1001', p.id, d.id, '2023-11-06', 'Pending', 'Post-treatment medication package. Dispense after payment confirmation.', '2023-11-06 12:00:00'

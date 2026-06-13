@@ -11,6 +11,7 @@ if ($id === (int) ($_SESSION['admin_id'] ?? 0)) {
 $stmt = $conn->prepare('DELETE FROM users WHERE id = ?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
+log_activity('Deleted user account', 'Users', $id);
 
 flash('success', 'User deleted successfully.');
 redirect('/users/view.php');

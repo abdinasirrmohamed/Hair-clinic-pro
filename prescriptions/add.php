@@ -59,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $conn->commit();
+        log_activity('Created prescription', 'Prescriptions', $prescription_id);
         flash('success', 'Prescription sent to pharmacy.');
         redirect('/prescriptions/view.php');
     } catch (Throwable $e) {

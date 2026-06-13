@@ -42,15 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
 
-            $stmt = $conn->prepare('SELECT id, medicine_name, quantity, unit_price FROM medicines WHERE id = ? FOR UPDATE');
+            $stmt = $conn->prepare('SELECT id, medicine_name, quantity, unit_price, expiry_date FROM medicines WHERE id = ? FOR UPDATE');
             $stmt->bind_param('i', $medicine_id);
             $medicine = fetch_one($stmt);
-            if (!$medicine) {
-                throw new Exception('One selected medicine could not be found.');
-            }
-            if ((int) $medicine['quantity'] < $quantity) {
-                throw new Exception($medicine['medicine_name'] . ' has only ' . (int) $medicine['quantity'] . ' units available.');
-            }
+            ensure_medicine_can_issue($medicine, $quantity);
 
             $unit_price = (float) $medicine['unit_price'];
             $line_total = $unit_price * $quantity;
@@ -95,9 +90,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare('UPDATE medicines SET quantity = quantity - ? WHERE id = ?');
             $stmt->bind_param('ii', $item['quantity'], $item['medicine_id']);
             $stmt->execute();
+
+            record_inventory_movement($item['medicine_id'], 'Pharmacy Sales', $item['quantity'], $item['unit_price'], [
+                'department' => 'Pharmacy',
+                'purpose' => 'POS sale stock deduction',
+                'reference_type' => 'Pharmacy Sale',
+                'reference_id' => $sale_id,
+            ]);
         }
 
         $conn->commit();
+        log_activity('Processed pharmacy sale', 'Pharmacy', $sale_id);
         flash('success', 'Sale completed, stock updated, and receipt generated.');
         redirect('/pharmacy/receipt.php?id=' . $sale_id);
     } catch (Throwable $e) {

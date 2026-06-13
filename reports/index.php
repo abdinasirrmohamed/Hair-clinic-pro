@@ -59,6 +59,20 @@ $inventory_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items');
 $payment_count = count_table($conn, 'SELECT COUNT(*) FROM payments');
 $payment_total = count_table($conn, 'SELECT COALESCE(SUM(amount), 0) FROM payments');
 $pharmacy_sales_count = count_table($conn, 'SELECT COUNT(*) FROM pharmacy_sales');
+$stmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) total FROM payments WHERE payment_status IN ('Paid','Partial') AND DATE(created_at) BETWEEN ? AND ?");
+$stmt->bind_param('ss', $start, $end);
+$patient_payment_revenue = (float) (fetch_one($stmt)['total'] ?? 0);
+$stmt = $conn->prepare("SELECT COALESCE(SUM(total_amount), 0) total FROM pharmacy_sales WHERE status <> 'Returned' AND DATE(created_at) BETWEEN ? AND ?");
+$stmt->bind_param('ss', $start, $end);
+$report_pharmacy_revenue = (float) (fetch_one($stmt)['total'] ?? 0);
+$stmt = $conn->prepare('SELECT COALESCE(SUM(amount), 0) total FROM expenses WHERE expense_date BETWEEN ? AND ?');
+$stmt->bind_param('ss', $start, $end);
+$report_expenses = (float) (fetch_one($stmt)['total'] ?? 0);
+$report_revenue = $patient_payment_revenue + $report_pharmacy_revenue + $income;
+$report_profit = $report_revenue - $report_expenses;
+$stmt = $conn->prepare('SELECT * FROM audit_logs WHERE DATE(created_at) BETWEEN ? AND ? ORDER BY created_at DESC LIMIT 12');
+$stmt->bind_param('ss', $start, $end);
+$report_activities = fetch_all($stmt);
 $doctor_count = count_table($conn, 'SELECT COUNT(*) FROM doctors');
 $low_stock_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level < 10');
 $stock_in_count = count_table($conn, "SELECT COUNT(*) FROM inventory_orders WHERE order_status IN ('Pending', 'Shipped', 'Delivered')");
@@ -91,6 +105,9 @@ $visible_report_cards = [
     ['key' => 'medical_history', 'label' => 'Medical History Reports', 'value' => $total_medical_history ?? count_table($conn, 'SELECT COUNT(*) FROM patients WHERE medical_notes IS NOT NULL AND medical_notes <> ""'), 'icon' => 'bi-file-medical'],
     ['key' => 'inventory', 'label' => 'Inventory Reports', 'value' => $inventory_count, 'icon' => 'bi-archive'],
     ['key' => 'payments', 'label' => 'Payment Reports', 'value' => $payment_count, 'icon' => 'bi-credit-card'],
+    ['key' => 'finance', 'label' => 'Financial Summary', 'value' => $report_revenue, 'icon' => 'bi-cash-coin'],
+    ['key' => 'expenses', 'label' => 'Expense Reports', 'value' => $report_expenses, 'icon' => 'bi-receipt-cutoff'],
+    ['key' => 'profit_loss', 'label' => 'Profit & Loss', 'value' => $report_profit, 'icon' => 'bi-pie-chart'],
     ['key' => 'pharmacy', 'label' => 'Pharmacy Reports', 'value' => $pharmacy_sales_count, 'icon' => 'bi-capsule'],
     ['key' => 'doctor_performance', 'label' => 'Doctor Performance', 'value' => $doctor_count, 'icon' => 'bi-person-badge'],
     ['key' => 'stock_in', 'label' => 'Stock In Reports', 'value' => $stock_in_count, 'icon' => 'bi-box-arrow-in-down'],
@@ -147,7 +164,8 @@ $visible_report_cards = [
             <div class="patient-metrics report-metrics">
                 <?php foreach ($visible_report_cards as $card): ?>
                     <?php if (can_view_report($card['key'])): ?>
-                        <article class="patient-metric"><div><p><?= e($card['label']) ?></p><strong><?= number_format((int) $card['value']) ?></strong></div><span class="metric-icon blue"><i class="bi <?= e($card['icon']) ?>"></i></span></article>
+                        <?php $report_card_money = in_array($card['key'], ['finance', 'expenses', 'profit_loss', 'payments'], true); ?>
+                        <article class="patient-metric"><div><p><?= e($card['label']) ?></p><strong><?= $report_card_money ? '$' . number_format((float) $card['value'], 2) : number_format((int) $card['value']) ?></strong></div><span class="metric-icon blue"><i class="bi <?= e($card['icon']) ?>"></i></span></article>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </div>
@@ -262,6 +280,43 @@ $visible_report_cards = [
                                 </div>
                             <?php endif; ?>
                         <?php endforeach; ?>
+                    </div>
+                </section>
+                <?php endif; ?>
+
+                <?php if (can_view_report('finance') || can_view_report('expenses') || can_view_report('profit_loss')): ?>
+                <section class="report-table-card treatments-report-card">
+                    <div class="report-section-head">
+                        <h2>Financial Summary</h2>
+                        <span>$<?= number_format($report_profit, 2) ?> net</span>
+                    </div>
+                    <div class="report-table">
+                        <div class="report-table-head treatment-report-head"><span>Report</span><span>Amount</span><span>Status</span><span>Formula</span><span>Period</span></div>
+                        <div class="report-table-row treatment-report-row"><span>Total Revenue</span><span>$<?= number_format($report_revenue, 2) ?></span><em class="status-pill active">Revenue</em><span>Payments + Pharmacy + Treatments</span><span><?= e($title) ?></span></div>
+                        <div class="report-table-row treatment-report-row"><span>Total Expenses</span><span>$<?= number_format($report_expenses, 2) ?></span><em class="status-pill inactive">Expense</em><span>Expense records</span><span><?= e($title) ?></span></div>
+                        <div class="report-table-row treatment-report-row"><span>Net Profit</span><span>$<?= number_format($report_profit, 2) ?></span><em class="status-pill <?= $report_profit >= 0 ? 'active' : 'inactive' ?>"><?= $report_profit >= 0 ? 'Profit' : 'Loss' ?></em><span>Revenue - Expenses</span><span><?= e($title) ?></span></div>
+                    </div>
+                </section>
+                <?php endif; ?>
+
+                <?php if (can_view_report('audit_logs') || can_view_report('activity')): ?>
+                <section class="report-table-card treatments-report-card">
+                    <div class="report-section-head">
+                        <h2>Audit Activity</h2>
+                        <span><?= number_format(count($report_activities)) ?> recent</span>
+                    </div>
+                    <div class="report-table">
+                        <div class="report-table-head treatment-report-head"><span>User</span><span>Role</span><span>Action</span><span>Module</span><span>Date</span></div>
+                        <?php foreach ($report_activities as $activity): ?>
+                            <div class="report-table-row treatment-report-row">
+                                <span><?= e($activity['user_name']) ?></span>
+                                <span><?= e($activity['user_role']) ?></span>
+                                <span><?= e($activity['action']) ?></span>
+                                <em class="status-pill active"><?= e($activity['module_name']) ?></em>
+                                <span><?= e(date('M j, h:i A', strtotime($activity['created_at']))) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if (!$report_activities): ?><div class="empty-state">No activities in this period.</div><?php endif; ?>
                     </div>
                 </section>
                 <?php endif; ?>
