@@ -23,6 +23,12 @@ $pending_followups = count_table($conn, "SELECT COUNT(*) FROM followups f JOIN p
 $available_stock = count_table($conn, 'SELECT COALESCE(SUM(stock_level), 0) FROM inventory_items WHERE stock_level > 0');
 $low_stock_items = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level < 10');
 $expired_items = 0;
+$pharmacy_sales_today = count_table($conn, 'SELECT COUNT(*) FROM pharmacy_sales WHERE DATE(created_at) = CURDATE()');
+$pharmacy_revenue_today = (float) $conn->query('SELECT COALESCE(SUM(total_amount), 0) FROM pharmacy_sales WHERE DATE(created_at) = CURDATE()')->fetch_row()[0];
+$pending_prescriptions_count = count_table($conn, "SELECT COUNT(*) FROM prescriptions WHERE status = 'Pending'");
+$dispensed_prescriptions_count = count_table($conn, "SELECT COUNT(*) FROM prescriptions WHERE status IN ('Dispensed','Completed')");
+$low_stock_medicines = count_table($conn, 'SELECT COUNT(*) FROM medicines WHERE quantity <= 10');
+$expired_medicines = count_table($conn, 'SELECT COUNT(*) FROM medicines WHERE expiry_date < CURDATE()');
 $system_activity = $total_patients + $total_appointments + $total_treatments + $total_inventory_items;
 
 $role = current_role();
@@ -70,6 +76,19 @@ $dashboard_profiles = [
             ['label' => 'Low Stock Items', 'value' => $low_stock_items, 'icon' => 'bi-exclamation-triangle', 'tone' => 'red', 'chip' => 'Alert', 'chipTone' => 'red'],
             ['label' => 'Expired Items', 'value' => $expired_items, 'icon' => 'bi-calendar2-x', 'tone' => 'red', 'chip' => 'Monitor', 'chipTone' => 'neutral'],
             ['label' => 'Medicines', 'value' => $total_medicines, 'icon' => 'bi-capsule', 'tone' => 'mint', 'chip' => 'Pharmacy', 'chipTone' => 'green'],
+        ],
+    ],
+    'Pharmacy User' => [
+        'title' => 'Pharmacy Dashboard',
+        'subtitle' => 'Medicine sales, prescription queue, stock alerts, and revenue overview.',
+        'metrics' => [
+            ['label' => 'Total Medicines', 'value' => $total_medicines, 'icon' => 'bi-capsule', 'tone' => 'blue', 'chip' => 'Stock', 'chipTone' => 'neutral'],
+            ['label' => 'Total Sales Today', 'value' => $pharmacy_sales_today, 'icon' => 'bi-receipt', 'tone' => 'mint', 'chip' => 'POS', 'chipTone' => 'green'],
+            ['label' => "Today's Revenue", 'value' => $pharmacy_revenue_today, 'icon' => 'bi-cash-stack', 'tone' => 'blue', 'chip' => 'Paid', 'chipTone' => 'green'],
+            ['label' => 'Pending Prescriptions', 'value' => $pending_prescriptions_count, 'icon' => 'bi-prescription2', 'tone' => 'red', 'chip' => 'Queue', 'chipTone' => 'red'],
+            ['label' => 'Dispensed Prescriptions', 'value' => $dispensed_prescriptions_count, 'icon' => 'bi-check2-circle', 'tone' => 'mint', 'chip' => 'Done', 'chipTone' => 'green'],
+            ['label' => 'Low Stock Medicines', 'value' => $low_stock_medicines, 'icon' => 'bi-exclamation-triangle', 'tone' => 'red', 'chip' => 'Alert', 'chipTone' => 'red'],
+            ['label' => 'Expired Medicines', 'value' => $expired_medicines, 'icon' => 'bi-calendar-x', 'tone' => 'red', 'chip' => 'Review', 'chipTone' => 'neutral'],
         ],
     ],
 ];
@@ -203,13 +222,14 @@ function appointment_status_class($status)
 
             <div class="metric-grid">
                 <?php foreach ($profile['metrics'] as $metric): ?>
+                    <?php $metric_value = stripos($metric['label'], 'Revenue') !== false || stripos($metric['label'], 'Payments') !== false ? '$' . number_format((float) $metric['value'], 2) : number_format((int) $metric['value']); ?>
                     <article class="metric-card">
                         <div class="metric-top">
                             <span class="metric-icon <?= e($metric['tone']) ?>"><i class="bi <?= e($metric['icon']) ?>"></i></span>
                             <span class="metric-chip <?= e($metric['chipTone']) ?>"><?= e($metric['chip']) ?></span>
                         </div>
                         <p><?= e($metric['label']) ?></p>
-                        <strong><?= number_format((int) $metric['value']) ?></strong>
+                        <strong><?= e($metric_value) ?></strong>
                     </article>
                 <?php endforeach; ?>
             </div>
@@ -282,6 +302,18 @@ function appointment_status_class($status)
                 </section>
             <?php endif; ?>
 
+            <?php if (current_role() === 'Pharmacy User'): ?>
+                <section class="patient-management-card">
+                    <div class="patient-tabs"><div class="tab-links"><a class="active" href="<?= BASE_URL ?>/pharmacy/dashboard.php">Pharmacy Workbench</a><a href="<?= BASE_URL ?>/pharmacy/sale.php">New Sale</a><a href="<?= BASE_URL ?>/pharmacy/prescriptions.php">Prescriptions</a><a href="<?= BASE_URL ?>/pharmacy/reports.php">Reports</a></div></div>
+                    <div class="p-4">
+                        <div class="row g-3">
+                            <div class="col-md-4"><a class="btn btn-primary w-100 py-3" href="<?= BASE_URL ?>/pharmacy/sale.php"><i class="bi bi-cart-plus"></i> Create Direct Sale</a></div>
+                            <div class="col-md-4"><a class="btn btn-outline-primary w-100 py-3" href="<?= BASE_URL ?>/pharmacy/prescriptions.php"><i class="bi bi-prescription2"></i> Process Prescriptions</a></div>
+                            <div class="col-md-4"><a class="btn btn-outline-secondary w-100 py-3" href="<?= BASE_URL ?>/pharmacy/reports.php"><i class="bi bi-graph-up"></i> Pharmacy Reports</a></div>
+                        </div>
+                    </div>
+                </section>
+            <?php else: ?>
             <div class="dashboard-grid">
                 <section class="recent-panel">
                     <div class="panel-title">
@@ -347,6 +379,7 @@ function appointment_status_class($status)
                     </section>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
         </main>
     </section>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

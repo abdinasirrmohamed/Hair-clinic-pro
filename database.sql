@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(150) NOT NULL,
-    role ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator',
+    role ENUM('Administrator','Receptionist','Doctor','Inventory Officer','Pharmacy User') NOT NULL DEFAULT 'Administrator',
     status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -192,11 +192,71 @@ CREATE TABLE IF NOT EXISTS pharmacy_payments (
     FOREIGN KEY (invoice_id) REFERENCES pharmacy_invoices(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS prescriptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    prescription_number VARCHAR(40) NOT NULL UNIQUE,
+    patient_id INT NOT NULL,
+    doctor_id INT NOT NULL,
+    prescription_date DATE NOT NULL,
+    status ENUM('Pending','Dispensed','Completed') NOT NULL DEFAULT 'Pending',
+    instructions TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS prescription_medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    prescription_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    instructions VARCHAR(255),
+    FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_sales (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sale_number VARCHAR(40) NOT NULL UNIQUE,
+    customer_name VARCHAR(150),
+    patient_id INT NULL,
+    prescription_id INT NULL,
+    medicine_count INT NOT NULL DEFAULT 0,
+    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+    discount_type ENUM('None','Percentage','Fixed') NOT NULL DEFAULT 'None',
+    discount_value DECIMAL(10,2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tax_percent DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_method ENUM('Cash','EVC Plus','Sahal','Bank Transfer') NOT NULL,
+    payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
+    status ENUM('Paid','Pending','Cancelled') NOT NULL DEFAULT 'Paid',
+    notes TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE SET NULL,
+    FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_sale_medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sale_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (sale_id) REFERENCES pharmacy_sales(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+);
+
 INSERT INTO users (username, password, full_name, role) VALUES
 ('admin', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'System Administrator', 'Administrator'),
 ('receptionist', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Amina Receptionist', 'Receptionist'),
 ('doctor', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Dr. Sarah Jenkins', 'Doctor'),
-('inventory', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Yusuf Inventory', 'Inventory Officer')
+('inventory', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Yusuf Inventory', 'Inventory Officer'),
+('pharmacy', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Nadia Pharmacy', 'Pharmacy User')
 ON DUPLICATE KEY UPDATE
 full_name = VALUES(full_name),
 role = VALUES(role);
@@ -307,6 +367,30 @@ quantity = VALUES(quantity),
 unit_price = VALUES(unit_price),
 expiry_date = VALUES(expiry_date),
 supplier = VALUES(supplier);
+
+INSERT INTO prescriptions (id, prescription_number, patient_id, doctor_id, prescription_date, status, instructions, created_at)
+SELECT 1, 'RX-20231106-1001', p.id, d.id, '2023-11-06', 'Pending', 'Post-treatment medication package. Dispense after payment confirmation.', '2023-11-06 12:00:00'
+FROM patients p
+JOIN doctors d
+WHERE p.id = 1
+ORDER BY d.id
+LIMIT 1
+ON DUPLICATE KEY UPDATE
+patient_id = VALUES(patient_id),
+doctor_id = VALUES(doctor_id),
+prescription_date = VALUES(prescription_date),
+status = VALUES(status),
+instructions = VALUES(instructions);
+
+INSERT INTO prescription_medicines (id, prescription_id, medicine_id, quantity, instructions) VALUES
+(1, 1, 1, 1, 'Apply daily to treatment area.'),
+(2, 1, 2, 1, 'Take one tablet daily.'),
+(3, 1, 3, 1, 'Complete the post-op course.')
+ON DUPLICATE KEY UPDATE
+prescription_id = VALUES(prescription_id),
+medicine_id = VALUES(medicine_id),
+quantity = VALUES(quantity),
+instructions = VALUES(instructions);
 
 INSERT INTO inventory_items (id, item_name, category, stock_level, unit_price, vendor, status) VALUES
 (1, 'FUE Graft Preservation Solution', 'Surgical', 8, 124.00, 'BioMed Logistics', 'Low Stock'),

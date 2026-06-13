@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('pharmacy');
+require_roles(['Administrator', 'Inventory Officer']);
 $page_title = 'Add Medicine';
 require_once __DIR__ . '/../includes/header.php';
 

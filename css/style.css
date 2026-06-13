@@ -3628,6 +3628,83 @@ body {
     min-height: 4.45rem;
 }
 
+.pos-table .select2-container .select2-selection--single {
+    border: 1px solid #c4ccda;
+    border-radius: 4px;
+    height: 38px;
+}
+
+.pos-table .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+}
+
+.pos-table .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.stock-badge {
+    background: #eef4ff;
+    border-radius: 4px;
+    color: #063c94;
+    display: inline-block;
+    font-size: .78rem;
+    font-weight: 800;
+    padding: .35rem .55rem;
+}
+
+.invoice-total-line {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding: .35rem 0;
+}
+
+.invoice-total-line span {
+    color: #53627a;
+    font-weight: 700;
+}
+
+.invoice-total-line strong {
+    color: #101828;
+    font-size: 1rem;
+}
+
+.invoice-total-line.total {
+    border-top: 1px solid #d3d9e5;
+    margin-top: .55rem;
+    padding-top: .85rem;
+}
+
+.invoice-total-line.total strong {
+    color: #063c94;
+    font-size: 1.35rem;
+}
+
+@media print {
+    .clinic-sidebar,
+    .clinic-topbar,
+    .patient-head,
+    .side-bottom {
+        display: none !important;
+    }
+
+    .dashboard-shell,
+    .clinic-main,
+    .clinic-content,
+    .legacy-content {
+        background: #fff !important;
+        display: block;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+    }
+
+    .invoice-print {
+        border: 0;
+        box-shadow: none;
+    }
+}
+
 .patient-id {
     color: #40506b;
     font-size: .8rem;

@@ -11,6 +11,7 @@ $module_paths = [
     '/payments/' => 'payments',
     '/treatments/' => 'treatments',
     '/followups/' => 'followups',
+    '/prescriptions/' => 'prescriptions',
     '/inventory/' => 'inventory',
     '/pharmacy/' => 'pharmacy',
     '/reports/' => 'reports',
