@@ -46,9 +46,18 @@ foreach ($users as $user) {
     }
 }
 ?>
+<div class="role-page-hero">
+    <div>
+        <span>Access Control</span>
+        <h1>User Role Management</h1>
+        <p>Manage clinic accounts, review role coverage, and audit what every role can access.</p>
+    </div>
+    <a href="add.php"><i class="bi bi-person-plus"></i>Add Member</a>
+</div>
+
 <div class="role-settings-page">
     <aside class="settings-nav-panel">
-        <h1>Account settings</h1>
+        <h1>Settings</h1>
         <section>
             <h2>Personal</h2>
             <a href="#"><i class="bi bi-person"></i>Profile</a>
@@ -69,7 +78,8 @@ foreach ($users as $user) {
         <div class="role-panel-head">
             <div>
                 <span>Team members</span>
-                <h2>Invite or manage your clinic users.</h2>
+                <h2>Invite or manage your clinic users</h2>
+                <p><?= count($users) ?> active account records synced with the RBAC policy.</p>
             </div>
             <a href="add.php"><i class="bi bi-plus-lg"></i>Add Member</a>
         </div>
@@ -81,7 +91,8 @@ foreach ($users as $user) {
 
         <div class="team-strip" id="team-members">
             <?php foreach ($role_counts as $role => $count): ?>
-                <article>
+                <article class="role-stat-card <?= e(role_key($role)) ?>">
+                    <i class="bi <?= $role === 'Administrator' ? 'bi-shield-check' : ($role === 'Doctor' ? 'bi-person-badge' : ($role === 'Inventory Officer' ? 'bi-archive' : 'bi-headset')) ?>"></i>
                     <span><?= e($role) ?></span>
                     <strong><?= number_format($count) ?></strong>
                 </article>
@@ -89,6 +100,13 @@ foreach ($users as $user) {
         </div>
 
         <div class="member-list-card">
+            <div class="section-kicker">
+                <div>
+                    <span>All users</span>
+                    <h3>Team directory</h3>
+                </div>
+                <small>CRUD actions</small>
+            </div>
             <div class="member-list-head">
                 <span>User</span>
                 <span>Role</span>
@@ -101,7 +119,7 @@ foreach ($users as $user) {
                         <b><?= e(strtoupper(substr($user['full_name'], 0, 1) . substr($user['username'], 0, 1))) ?></b>
                         <span><strong><?= e($user['full_name']) ?></strong><small><?= e($user['username']) ?></small></span>
                     </span>
-                    <em><?= e($user['role']) ?></em>
+                    <em class="role-badge <?= e(role_key($user['role'])) ?>"><?= e($user['role']) ?></em>
                     <span><?= e(date('M j, Y', strtotime($user['created_at']))) ?></span>
                     <span class="patient-actions">
                         <a href="edit.php?id=<?= $user['id'] ?>" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -114,6 +132,13 @@ foreach ($users as $user) {
         </div>
 
         <div class="permission-matrix-card" id="role-manager">
+            <div class="section-kicker permission-kicker">
+                <div>
+                    <span>Permission matrix</span>
+                    <h3>User role manager</h3>
+                </div>
+                <small>Read-only policy map</small>
+            </div>
             <div class="permission-grid permission-grid-head">
                 <span>Actions</span>
                 <?php foreach ($roles as $role): ?>
