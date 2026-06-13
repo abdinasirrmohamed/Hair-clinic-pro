@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $admin['id'];
         $_SESSION['admin_name'] = $admin['full_name'];
         $_SESSION['admin_role'] = $admin['role'];
+        if ($admin['role'] === 'Pharmacy User') {
+            redirect('/pharmacy/dashboard.php');
+        }
         redirect('/dashboard.php');
     }
 
@@ -51,7 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button class="btn btn-primary w-100" type="submit">Login</button>
             <p class="text-muted small mt-3 mb-0">Default: admin / admin123</p>
-            <p class="text-muted small mb-0">Sample roles: receptionist, doctor, inventory / admin123</p>
+            <p class="text-muted small mb-0">Sample roles: receptionist, doctor, inventory, pharmacy / admin123</p>
+            <p class="text-muted small mt-2 mb-0"><a href="<?= BASE_URL ?>/pharmacy-login.php">Pharmacy staff login</a></p>
         </form>
     </div>
 </body>

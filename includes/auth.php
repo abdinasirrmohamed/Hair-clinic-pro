@@ -142,6 +142,10 @@ function render_role_sidebar($current_path = '')
 function require_login()
 {
     if (!is_logged_in()) {
+        $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+        if (strpos($script, '/pharmacy/') !== false) {
+            redirect('/pharmacy-login.php');
+        }
         redirect('/login.php');
     }
 }
