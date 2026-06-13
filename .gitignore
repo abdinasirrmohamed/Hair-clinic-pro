@@ -1,0 +1,15 @@
+# Local editor and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Runtime logs and temporary files
+*.log
+*.tmp
+tmp/
+cache/
+
+# Local environment overrides
+.env
+.env.*
