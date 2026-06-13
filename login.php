@@ -8,11 +8,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $conn->prepare('SELECT id, username, password, full_name, role FROM users WHERE username = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT id, username, password, full_name, role, status FROM users WHERE username = ? LIMIT 1');
     $stmt->bind_param('s', $username);
     $admin = fetch_one($stmt);
 
-    if ($admin && password_verify($password, $admin['password'])) {
+    if ($admin && $admin['status'] === 'Active' && password_verify($password, $admin['password'])) {
         session_regenerate_id(true);
         $_SESSION['admin_id'] = $admin['id'];
         $_SESSION['user_id'] = $admin['id'];

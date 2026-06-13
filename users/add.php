@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $full_name = trim($_POST['full_name'] ?? '');
     $role = $_POST['role'] ?? '';
+    $status = $_POST['status'] ?? 'Active';
     $password = $_POST['password'] ?? '';
 
     if ($username === '') {
@@ -26,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $conn->prepare('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)');
-        $stmt->bind_param('ssss', $username, $hash, $full_name, $role);
+        $stmt = $conn->prepare('INSERT INTO users (username, password, full_name, role, status) VALUES (?, ?, ?, ?, ?)');
+        $stmt->bind_param('sssss', $username, $hash, $full_name, $role, $status);
         try {
             $stmt->execute();
             flash('success', 'User created successfully.');
@@ -67,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status"><option>Active</option><option>Inactive</option></select></div>
         <div class="col-md-6">
             <label class="form-label">Password</label>
             <input class="form-control" type="password" name="password" required>

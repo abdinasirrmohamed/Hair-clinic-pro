@@ -57,20 +57,36 @@ $conn->query("CREATE TABLE IF NOT EXISTS users (
 )");
 
 ensure_column($conn, 'users', 'role', "ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator'");
+ensure_column($conn, 'users', 'status', "ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'");
 ensure_column($conn, 'patients', 'assigned_doctor_id', 'INT NULL');
+ensure_column($conn, 'appointments', 'doctor_id', 'INT NULL');
+ensure_column($conn, 'appointments', 'remarks', 'TEXT NULL');
+
+$conn->query("ALTER TABLE appointments MODIFY status ENUM('Pending','Approved','Rejected','Completed','Cancelled') NOT NULL DEFAULT 'Pending'");
 
 $conn->query("CREATE TABLE IF NOT EXISTS doctors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NULL,
     full_name VARCHAR(150) NOT NULL,
     specialization VARCHAR(120) NOT NULL,
+    qualification VARCHAR(180),
     phone VARCHAR(30) NOT NULL,
     email VARCHAR(150),
     license_number VARCHAR(80) NOT NULL UNIQUE,
+    photo VARCHAR(255),
+    experience_years INT NOT NULL DEFAULT 0,
+    availability_schedule TEXT,
+    bio TEXT,
     status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 )");
+
+ensure_column($conn, 'doctors', 'qualification', 'VARCHAR(180) NULL');
+ensure_column($conn, 'doctors', 'photo', 'VARCHAR(255) NULL');
+ensure_column($conn, 'doctors', 'experience_years', 'INT NOT NULL DEFAULT 0');
+ensure_column($conn, 'doctors', 'availability_schedule', 'TEXT NULL');
+ensure_column($conn, 'doctors', 'bio', 'TEXT NULL');
 
 $conn->query("CREATE TABLE IF NOT EXISTS reports (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -83,6 +99,79 @@ $conn->query("CREATE TABLE IF NOT EXISTS reports (
     summary TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    appointment_id INT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('Cash','EVC Plus','Sahal','Bank Transfer') NOT NULL,
+    payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
+    reference_number VARCHAR(100),
+    notes TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS receipts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id INT NOT NULL,
+    receipt_number VARCHAR(40) NOT NULL UNIQUE,
+    clinic_name VARCHAR(150) NOT NULL DEFAULT 'Hair Clinic Pro',
+    clinic_phone VARCHAR(40) NOT NULL DEFAULT '+252 61 000 0000',
+    clinic_address VARCHAR(255) NOT NULL DEFAULT 'Mogadishu, Somalia',
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL DEFAULT 0,
+    unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    expiry_date DATE NOT NULL,
+    supplier VARCHAR(150) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS pharmacy_invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_number VARCHAR(40) NOT NULL UNIQUE,
+    patient_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_method ENUM('Cash','Mobile Money','Bank Transfer') NOT NULL,
+    payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
+    notes TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS pharmacy_invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    line_total DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (invoice_id) REFERENCES pharmacy_invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS pharmacy_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('Cash','Mobile Money','Bank Transfer') NOT NULL,
+    reference_number VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES pharmacy_invoices(id) ON DELETE CASCADE
 )");
 
 $conn->query("CREATE TABLE IF NOT EXISTS inventory_items (
@@ -135,6 +224,18 @@ $conn->query("INSERT INTO doctors (user_id, full_name, specialization, phone, em
 $conn->query("UPDATE patients
     SET assigned_doctor_id = (SELECT id FROM users WHERE username = 'doctor' LIMIT 1)
     WHERE assigned_doctor_id IS NULL");
+
+$conn->query("UPDATE appointments
+    SET doctor_id = (SELECT id FROM doctors WHERE license_number = 'HC-MD-1001' LIMIT 1)
+    WHERE doctor_id IS NULL");
+
+if (count_table($conn, 'SELECT COUNT(*) FROM medicines') === 0) {
+    $conn->query("INSERT INTO medicines (medicine_name, category, quantity, unit_price, expiry_date, supplier) VALUES
+        ('Minoxidil 5% Topical Solution', 'Hair Growth', 72, 38.00, '2027-12-31', 'ClinicSupplies Co.'),
+        ('Finasteride 1mg Tablets', 'Prescription', 120, 24.50, '2027-08-30', 'MediCare Pharma'),
+        ('Post-op Antibiotics', 'Post-Op', 35, 18.75, '2026-10-20', 'SurgiTech Global'),
+        ('Biotin Hair Support', 'Supplement', 15, 12.00, '2026-07-15', 'BioMed Logistics')");
+}
 
 if (!defined('BASE_URL')) {
     define('BASE_URL', '/hair-clinic-system');

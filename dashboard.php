@@ -8,6 +8,8 @@ $total_patients = count_table($conn, 'SELECT COUNT(*) FROM patients');
 $total_appointments = count_table($conn, 'SELECT COUNT(*) FROM appointments');
 $total_treatments = count_table($conn, 'SELECT COUNT(*) FROM treatments');
 $total_inventory_items = count_table($conn, 'SELECT COUNT(*) FROM inventory_items');
+$total_payments = count_table($conn, 'SELECT COALESCE(SUM(amount), 0) FROM payments');
+$total_medicines = count_table($conn, 'SELECT COUNT(*) FROM medicines');
 $completed_treatments = count_table($conn, "SELECT COUNT(*) FROM treatments WHERE progress = 'Completed'");
 $pending_appointments = count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Pending'");
 $today_appointments = count_table($conn, 'SELECT COUNT(*) FROM appointments WHERE appointment_date = CURDATE()');
@@ -45,6 +47,7 @@ $dashboard_profiles = [
             ['label' => 'Total Patients Registered', 'value' => $total_patients, 'icon' => 'bi-person-plus', 'tone' => 'blue', 'chip' => 'Registry', 'chipTone' => 'green'],
             ['label' => "Today's Appointments", 'value' => $today_appointments, 'icon' => 'bi-calendar-check', 'tone' => 'mint', 'chip' => 'Today', 'chipTone' => 'neutral'],
             ['label' => 'Upcoming Appointments', 'value' => $upcoming_appointments, 'icon' => 'bi-calendar2-week', 'tone' => 'blue', 'chip' => 'Scheduled', 'chipTone' => 'green'],
+            ['label' => 'Payments Collected', 'value' => $total_payments, 'icon' => 'bi-credit-card', 'tone' => 'mint', 'chip' => 'Payments', 'chipTone' => 'green'],
             ['label' => 'Recently Registered Patients', 'value' => $recently_registered, 'icon' => 'bi-clock-history', 'tone' => 'blue', 'chip' => '7 Days', 'chipTone' => 'neutral'],
         ],
     ],
@@ -66,6 +69,7 @@ $dashboard_profiles = [
             ['label' => 'Available Stock', 'value' => $available_stock, 'icon' => 'bi-box-seam', 'tone' => 'mint', 'chip' => 'Units', 'chipTone' => 'green'],
             ['label' => 'Low Stock Items', 'value' => $low_stock_items, 'icon' => 'bi-exclamation-triangle', 'tone' => 'red', 'chip' => 'Alert', 'chipTone' => 'red'],
             ['label' => 'Expired Items', 'value' => $expired_items, 'icon' => 'bi-calendar2-x', 'tone' => 'red', 'chip' => 'Monitor', 'chipTone' => 'neutral'],
+            ['label' => 'Medicines', 'value' => $total_medicines, 'icon' => 'bi-capsule', 'tone' => 'mint', 'chip' => 'Pharmacy', 'chipTone' => 'green'],
         ],
     ],
 ];

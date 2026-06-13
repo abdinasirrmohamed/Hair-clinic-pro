@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 $roles = array_keys(role_permissions());
 $id = (int) ($_GET['id'] ?? 0);
-$stmt = $conn->prepare('SELECT id, username, full_name, role FROM users WHERE id = ?');
+$stmt = $conn->prepare('SELECT id, username, full_name, role, status FROM users WHERE id = ?');
 $stmt->bind_param('i', $id);
 $user = fetch_one($stmt);
 
@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $full_name = trim($_POST['full_name'] ?? '');
     $role = $_POST['role'] ?? '';
+    $status = $_POST['status'] ?? 'Active';
     $password = $_POST['password'] ?? '';
 
     if ($username === '' || $full_name === '' || !in_array($role, $roles, true)) {
@@ -30,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Password must be at least 6 characters.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ?, password = ? WHERE id = ?');
-                $stmt->bind_param('ssssi', $username, $full_name, $role, $hash, $id);
+                $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ?, status = ?, password = ? WHERE id = ?');
+                $stmt->bind_param('sssssi', $username, $full_name, $role, $status, $hash, $id);
             }
         } else {
-            $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ? WHERE id = ?');
-            $stmt->bind_param('sssi', $username, $full_name, $role, $id);
+            $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ?, status = ? WHERE id = ?');
+            $stmt->bind_param('ssssi', $username, $full_name, $role, $status, $id);
         }
 
         if (!$errors) {
@@ -83,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status"><?php foreach (['Active', 'Inactive'] as $status): ?><option <?= ($_POST['status'] ?? $user['status']) === $status ? 'selected' : '' ?>><?= e($status) ?></option><?php endforeach; ?></select></div>
         <div class="col-md-6">
             <label class="form-label">New Password</label>
             <input class="form-control" type="password" name="password" placeholder="Leave blank to keep current password">

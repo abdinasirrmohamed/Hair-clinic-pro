@@ -7,9 +7,12 @@ $module_paths = [
     '/doctors/' => 'doctors',
     '/patients/' => 'patients',
     '/appointments/' => 'appointments',
+    '/doctor_appointments/' => 'doctor_appointments',
+    '/payments/' => 'payments',
     '/treatments/' => 'treatments',
     '/followups/' => 'followups',
     '/inventory/' => 'inventory',
+    '/pharmacy/' => 'pharmacy',
     '/reports/' => 'reports',
 ];
 

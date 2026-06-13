@@ -56,6 +56,10 @@ $followups = fetch_all($stmt);
 
 $users_count = count_table($conn, 'SELECT COUNT(*) FROM users');
 $inventory_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items');
+$payment_count = count_table($conn, 'SELECT COUNT(*) FROM payments');
+$payment_total = count_table($conn, 'SELECT COALESCE(SUM(amount), 0) FROM payments');
+$pharmacy_sales_count = count_table($conn, 'SELECT COUNT(*) FROM pharmacy_invoices');
+$doctor_count = count_table($conn, 'SELECT COUNT(*) FROM doctors');
 $low_stock_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level < 10');
 $stock_in_count = count_table($conn, "SELECT COUNT(*) FROM inventory_orders WHERE order_status IN ('Pending', 'Shipped', 'Delivered')");
 $stock_out_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level = 0');
@@ -86,11 +90,14 @@ $visible_report_cards = [
     ['key' => 'consultations', 'label' => 'Consultation Reports', 'value' => $appointments_count, 'icon' => 'bi-clipboard-pulse'],
     ['key' => 'medical_history', 'label' => 'Medical History Reports', 'value' => $total_medical_history ?? count_table($conn, 'SELECT COUNT(*) FROM patients WHERE medical_notes IS NOT NULL AND medical_notes <> ""'), 'icon' => 'bi-file-medical'],
     ['key' => 'inventory', 'label' => 'Inventory Reports', 'value' => $inventory_count, 'icon' => 'bi-archive'],
+    ['key' => 'payments', 'label' => 'Payment Reports', 'value' => $payment_count, 'icon' => 'bi-credit-card'],
+    ['key' => 'pharmacy', 'label' => 'Pharmacy Reports', 'value' => $pharmacy_sales_count, 'icon' => 'bi-capsule'],
+    ['key' => 'doctor_performance', 'label' => 'Doctor Performance', 'value' => $doctor_count, 'icon' => 'bi-person-badge'],
     ['key' => 'stock_in', 'label' => 'Stock In Reports', 'value' => $stock_in_count, 'icon' => 'bi-box-arrow-in-down'],
     ['key' => 'stock_out', 'label' => 'Stock Out Reports', 'value' => $stock_out_count, 'icon' => 'bi-box-arrow-up'],
     ['key' => 'low_stock', 'label' => 'Low Stock Reports', 'value' => $low_stock_count, 'icon' => 'bi-exclamation-triangle'],
     ['key' => 'expired', 'label' => 'Expired Items Reports', 'value' => $expired_count, 'icon' => 'bi-calendar2-x'],
-    ['key' => 'activity', 'label' => 'System Activity Reports', 'value' => $users_count + $appointments_count + $treatments_count + $inventory_count, 'icon' => 'bi-activity'],
+    ['key' => 'activity', 'label' => 'System Activity Reports', 'value' => $users_count + $appointments_count + $treatments_count + $inventory_count + $payment_count, 'icon' => 'bi-activity'],
 ];
 ?>
 <!doctype html>

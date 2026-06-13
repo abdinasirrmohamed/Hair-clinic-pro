@@ -53,14 +53,19 @@ if ($search !== '') {
     <?php foreach ($doctors as $doctor): ?>
         <div class="patient-list-grid patient-list-row" style="grid-template-columns: 1.4fr 1.3fr 1.2fr 1fr 1fr .8fr;">
             <span class="patient-list-name">
-                <span class="patient-avatar blue-avatar"><?= e(substr($doctor['full_name'], 0, 2)) ?></span>
-                <span><strong><?= e($doctor['full_name']) ?></strong><small><?= e($doctor['status']) ?></small></span>
+                <?php if (!empty($doctor['photo'])): ?>
+                    <img class="patient-avatar" src="<?= BASE_URL ?>/<?= e($doctor['photo']) ?>" alt="<?= e($doctor['full_name']) ?>">
+                <?php else: ?>
+                    <span class="patient-avatar blue-avatar"><?= e(substr($doctor['full_name'], 0, 2)) ?></span>
+                <?php endif; ?>
+                <span><a class="patient-profile-link" href="profile.php?id=<?= $doctor['id'] ?>"><?= e($doctor['full_name']) ?></a><small><?= e($doctor['status']) ?></small></span>
             </span>
             <span><?= e($doctor['specialization']) ?></span>
             <span class="patient-contact"><strong><?= e($doctor['phone']) ?></strong><small><?= e($doctor['email'] ?: 'No email') ?></small></span>
             <span><?= e($doctor['license_number']) ?></span>
             <span><?= e($doctor['username'] ?: 'Not linked') ?></span>
             <span class="patient-actions">
+                <a href="profile.php?id=<?= $doctor['id'] ?>" title="View"><i class="bi bi-eye"></i></a>
                 <a href="edit.php?id=<?= $doctor['id'] ?>" title="Edit"><i class="bi bi-pencil-square"></i></a>
                 <a href="delete.php?id=<?= $doctor['id'] ?>" title="Delete" onclick="return confirm('Delete this doctor?')"><i class="bi bi-trash"></i></a>
             </span>

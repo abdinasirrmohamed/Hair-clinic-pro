@@ -3669,6 +3669,10 @@ body {
     justify-content: center;
 }
 
+img.patient-avatar {
+    object-fit: cover;
+}
+
 .blue-avatar {
     background: #cfe0fb;
     color: #06469f;

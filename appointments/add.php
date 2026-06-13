@@ -4,11 +4,13 @@ require_roles(['Administrator', 'Receptionist']);
 $page_title = 'Book Appointment';
 require_once __DIR__ . '/../includes/header.php';
 $patients = $conn->query('SELECT id, full_name FROM patients ORDER BY full_name')->fetch_all(MYSQLI_ASSOC);
+$doctors = $conn->query("SELECT id, full_name, specialization FROM doctors WHERE status = 'Active' ORDER BY full_name")->fetch_all(MYSQLI_ASSOC);
 $prefill_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'] ?? '') ? $_GET['date'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $patient_mode = $_POST['patient_mode'] ?? 'existing';
     $patient_id = (int) ($_POST['patient_id'] ?? 0);
+    $doctor_id = (int) ($_POST['doctor_id'] ?? 0);
     $appointment_date = $_POST['appointment_date'] ?? '';
     $appointment_time = $_POST['appointment_time'] ?? '';
     $reason = trim($_POST['reason'] ?? '');
@@ -37,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $patient_id = $conn->insert_id;
         }
 
-        if ($patient_id <= 0 || $appointment_date === '' || $appointment_time === '' || $reason === '') {
-            throw new Exception('Please complete patient, date, time, and reason fields.');
+        if ($patient_id <= 0 || $doctor_id <= 0 || $appointment_date === '' || $appointment_time === '' || $reason === '') {
+            throw new Exception('Please complete patient, doctor, date, time, and reason fields.');
         }
 
-        $stmt = $conn->prepare('INSERT INTO appointments (patient_id, appointment_date, appointment_time, reason, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
-        $stmt->bind_param('isssss', $patient_id, $appointment_date, $appointment_time, $reason, $status, $appointment_notes);
+        $stmt = $conn->prepare('INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->bind_param('iisssss', $patient_id, $doctor_id, $appointment_date, $appointment_time, $reason, $status, $appointment_notes);
         $stmt->execute();
 
         $conn->commit();
@@ -66,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
         <div class="col-md-6 existing-patient-field"><label class="form-label">Existing Patient</label><select class="form-select" name="patient_id" id="patient_id"><option value="">Select patient</option><?php foreach ($patients as $p): ?><option value="<?= $p['id'] ?>"><?= e($p['full_name']) ?></option><?php endforeach; ?></select></div>
+        <div class="col-md-6"><label class="form-label">Doctor</label><select class="form-select" name="doctor_id" required><option value="">Select doctor</option><?php foreach ($doctors as $doctor): ?><option value="<?= $doctor['id'] ?>"><?= e($doctor['full_name']) ?> - <?= e($doctor['specialization']) ?></option><?php endforeach; ?></select></div>
         <div class="col-12 new-patient-panel d-none">
             <div class="row g-3">
                 <div class="col-md-6"><label class="form-label">New Patient Name</label><input class="form-control new-patient-required" name="new_full_name"></div>
@@ -80,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="col-md-3"><label class="form-label">Date</label><input class="form-control" type="date" name="appointment_date" value="<?= e($prefill_date) ?>" required></div>
         <div class="col-md-3"><label class="form-label">Time</label><input class="form-control" type="time" name="appointment_time" required></div>
         <div class="col-md-8"><label class="form-label">Reason</label><input class="form-control" name="reason" required></div>
-        <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></div>
+        <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status"><option>Pending</option><option>Approved</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></div>
         <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="4"></textarea></div>
     </div>
     <div class="mt-4"><button class="btn btn-primary">Save Appointment</button> <a class="btn btn-secondary" href="view.php">Cancel</a></div>

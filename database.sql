@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(150) NOT NULL,
     role ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator',
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -15,9 +16,14 @@ CREATE TABLE IF NOT EXISTS doctors (
     user_id INT NULL,
     full_name VARCHAR(150) NOT NULL,
     specialization VARCHAR(120) NOT NULL,
+    qualification VARCHAR(180),
     phone VARCHAR(30) NOT NULL,
     email VARCHAR(150),
     license_number VARCHAR(80) NOT NULL UNIQUE,
+    photo VARCHAR(255),
+    experience_years INT NOT NULL DEFAULT 0,
+    availability_schedule TEXT,
+    bio TEXT,
     status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -39,13 +45,16 @@ CREATE TABLE IF NOT EXISTS patients (
 CREATE TABLE IF NOT EXISTS appointments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patient_id INT NOT NULL,
+    doctor_id INT NULL,
     appointment_date DATE NOT NULL,
     appointment_time TIME NOT NULL,
     reason VARCHAR(255) NOT NULL,
-    status ENUM('Pending', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Pending',
+    status ENUM('Pending','Approved','Rejected','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
     notes TEXT,
+    remarks TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS treatments (
@@ -108,6 +117,79 @@ CREATE TABLE IF NOT EXISTS reports (
     summary TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    appointment_id INT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('Cash','EVC Plus','Sahal','Bank Transfer') NOT NULL,
+    payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
+    reference_number VARCHAR(100),
+    notes TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS receipts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_id INT NOT NULL,
+    receipt_number VARCHAR(40) NOT NULL UNIQUE,
+    clinic_name VARCHAR(150) NOT NULL DEFAULT 'Hair Clinic Pro',
+    clinic_phone VARCHAR(40) NOT NULL DEFAULT '+252 61 000 0000',
+    clinic_address VARCHAR(255) NOT NULL DEFAULT 'Mogadishu, Somalia',
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL DEFAULT 0,
+    unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    expiry_date DATE NOT NULL,
+    supplier VARCHAR(150) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_number VARCHAR(40) NOT NULL UNIQUE,
+    patient_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_method ENUM('Cash','Mobile Money','Bank Transfer') NOT NULL,
+    payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
+    notes TEXT,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    line_total DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (invoice_id) REFERENCES pharmacy_invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pharmacy_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('Cash','Mobile Money','Bank Transfer') NOT NULL,
+    reference_number VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invoice_id) REFERENCES pharmacy_invoices(id) ON DELETE CASCADE
 );
 
 INSERT INTO users (username, password, full_name, role) VALUES
@@ -194,6 +276,10 @@ reason = VALUES(reason),
 status = VALUES(status),
 notes = VALUES(notes);
 
+UPDATE appointments
+SET doctor_id = (SELECT id FROM doctors WHERE license_number = 'HC-MD-1001' LIMIT 1)
+WHERE doctor_id IS NULL;
+
 INSERT INTO followups (id, patient_id, treatment_id, followup_date, result, status, created_at) VALUES
 (1, 1, 1, '2023-11-22', 'Week 4 review: scalp healing well. Recipient site redness has subsided significantly.', 'Done', '2023-11-22 11:40:00'),
 (2, 1, 1, '2023-12-20', 'Week 8 update: patient reporting minimal discomfort and good medication adherence.', 'Done', '2023-12-20 10:15:00'),
@@ -208,6 +294,19 @@ treatment_id = VALUES(treatment_id),
 followup_date = VALUES(followup_date),
 result = VALUES(result),
 status = VALUES(status);
+
+INSERT INTO medicines (id, medicine_name, category, quantity, unit_price, expiry_date, supplier) VALUES
+(1, 'Minoxidil 5% Topical Solution', 'Hair Growth', 72, 38.00, '2027-12-31', 'ClinicSupplies Co.'),
+(2, 'Finasteride 1mg Tablets', 'Prescription', 120, 24.50, '2027-08-30', 'MediCare Pharma'),
+(3, 'Post-op Antibiotics', 'Post-Op', 35, 18.75, '2026-10-20', 'SurgiTech Global'),
+(4, 'Biotin Hair Support', 'Supplement', 15, 12.00, '2026-07-15', 'BioMed Logistics')
+ON DUPLICATE KEY UPDATE
+medicine_name = VALUES(medicine_name),
+category = VALUES(category),
+quantity = VALUES(quantity),
+unit_price = VALUES(unit_price),
+expiry_date = VALUES(expiry_date),
+supplier = VALUES(supplier);
 
 INSERT INTO inventory_items (id, item_name, category, stock_level, unit_price, vendor, status) VALUES
 (1, 'FUE Graft Preservation Solution', 'Surgical', 8, 124.00, 'BioMed Logistics', 'Low Stock'),
