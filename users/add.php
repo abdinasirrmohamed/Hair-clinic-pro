@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $conn->prepare('INSERT INTO admins (username, password, full_name, role) VALUES (?, ?, ?, ?)');
+        $stmt = $conn->prepare('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)');
         $stmt->bind_param('ssss', $username, $hash, $full_name, $role);
         try {
             $stmt->execute();

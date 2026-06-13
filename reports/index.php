@@ -54,7 +54,7 @@ $stmt = $conn->prepare(
 $stmt->bind_param('ss', $start, $end);
 $followups = fetch_all($stmt);
 
-$users_count = count_table($conn, 'SELECT COUNT(*) FROM admins');
+$users_count = count_table($conn, 'SELECT COUNT(*) FROM users');
 $inventory_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items');
 $low_stock_count = count_table($conn, 'SELECT COUNT(*) FROM inventory_items WHERE stock_level < 10');
 $stock_in_count = count_table($conn, "SELECT COUNT(*) FROM inventory_orders WHERE order_status IN ('Pending', 'Shipped', 'Delivered')");

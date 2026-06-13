@@ -4,6 +4,7 @@ $page_title = $page_title ?? 'Hair Clinic System';
 $current_path = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
 $module_paths = [
     '/users/' => 'users',
+    '/doctors/' => 'doctors',
     '/patients/' => 'patients',
     '/appointments/' => 'appointments',
     '/treatments/' => 'treatments',

@@ -8,7 +8,7 @@ if ($id === (int) ($_SESSION['admin_id'] ?? 0)) {
     redirect('/users/view.php');
 }
 
-$stmt = $conn->prepare('DELETE FROM admins WHERE id = ?');
+$stmt = $conn->prepare('DELETE FROM users WHERE id = ?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
 

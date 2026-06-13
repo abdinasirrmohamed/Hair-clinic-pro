@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 $roles = array_keys(role_permissions());
 $id = (int) ($_GET['id'] ?? 0);
-$stmt = $conn->prepare('SELECT id, username, full_name, role FROM admins WHERE id = ?');
+$stmt = $conn->prepare('SELECT id, username, full_name, role FROM users WHERE id = ?');
 $stmt->bind_param('i', $id);
 $user = fetch_one($stmt);
 
@@ -30,11 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Password must be at least 6 characters.';
             } else {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare('UPDATE admins SET username = ?, full_name = ?, role = ?, password = ? WHERE id = ?');
+                $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ?, password = ? WHERE id = ?');
                 $stmt->bind_param('ssssi', $username, $full_name, $role, $hash, $id);
             }
         } else {
-            $stmt = $conn->prepare('UPDATE admins SET username = ?, full_name = ?, role = ? WHERE id = ?');
+            $stmt = $conn->prepare('UPDATE users SET username = ?, full_name = ?, role = ? WHERE id = ?');
             $stmt->bind_param('sssi', $username, $full_name, $role, $id);
         }
 

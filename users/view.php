@@ -2,7 +2,7 @@
 $page_title = 'User Management';
 require_once __DIR__ . '/../includes/header.php';
 
-$users = $conn->query('SELECT id, username, full_name, role, created_at FROM admins ORDER BY role, full_name')->fetch_all(MYSQLI_ASSOC);
+$users = $conn->query('SELECT id, username, full_name, role, created_at FROM users ORDER BY role, full_name')->fetch_all(MYSQLI_ASSOC);
 ?>
 <div class="patient-head">
     <div>

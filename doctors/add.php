@@ -1,0 +1,69 @@
+<?php
+$page_title = 'Add Doctor';
+require_once __DIR__ . '/../includes/header.php';
+
+$doctor_users = $conn->query("SELECT id, full_name, username FROM users WHERE role = 'Doctor' ORDER BY full_name")->fetch_all(MYSQLI_ASSOC);
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $user_id = $_POST['user_id'] !== '' ? (int) $_POST['user_id'] : null;
+    $full_name = trim($_POST['full_name'] ?? '');
+    $specialization = trim($_POST['specialization'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $license_number = trim($_POST['license_number'] ?? '');
+    $status = $_POST['status'] ?? 'Active';
+
+    if ($full_name === '' || $specialization === '' || $phone === '' || $license_number === '') {
+        $errors[] = 'Doctor name, specialization, phone, and license number are required.';
+    }
+    if (!in_array($status, ['Active', 'Inactive'], true)) {
+        $errors[] = 'Invalid doctor status.';
+    }
+
+    if (!$errors) {
+        $stmt = $conn->prepare('INSERT INTO doctors (user_id, full_name, specialization, phone, email, license_number, status) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->bind_param('issssss', $user_id, $full_name, $specialization, $phone, $email, $license_number, $status);
+        try {
+            $stmt->execute();
+            flash('success', 'Doctor added successfully.');
+            redirect('/doctors/view.php');
+        } catch (mysqli_sql_exception $e) {
+            $errors[] = 'A doctor with this license number already exists.';
+        }
+    }
+}
+?>
+<div class="patient-head">
+    <div>
+        <h1>Add Doctor</h1>
+        <p>Create a clinical staff record and optionally link it to a Doctor login user.</p>
+    </div>
+</div>
+
+<?php if ($errors): ?><div class="alert alert-danger"><?= e(implode(' ', $errors)) ?></div><?php endif; ?>
+
+<section class="form-panel">
+    <form method="post" class="row g-3">
+        <div class="col-md-6"><label class="form-label">Doctor Name</label><input class="form-control" name="full_name" value="<?= e($_POST['full_name'] ?? '') ?>" required></div>
+        <div class="col-md-6"><label class="form-label">Specialization</label><input class="form-control" name="specialization" value="<?= e($_POST['specialization'] ?? '') ?>" required></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone" value="<?= e($_POST['phone'] ?? '') ?>" required></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="<?= e($_POST['email'] ?? '') ?>"></div>
+        <div class="col-md-6"><label class="form-label">License Number</label><input class="form-control" name="license_number" value="<?= e($_POST['license_number'] ?? '') ?>" required></div>
+        <div class="col-md-3"><label class="form-label">Status</label><select class="form-select" name="status"><option>Active</option><option>Inactive</option></select></div>
+        <div class="col-md-3">
+            <label class="form-label">Linked User</label>
+            <select class="form-select" name="user_id">
+                <option value="">No linked user</option>
+                <?php foreach ($doctor_users as $user): ?>
+                    <option value="<?= $user['id'] ?>"><?= e($user['full_name']) ?> (<?= e($user['username']) ?>)</option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-12 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Save Doctor</button>
+            <a class="btn btn-outline-secondary" href="view.php">Cancel</a>
+        </div>
+    </form>
+</section>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

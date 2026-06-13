@@ -1,13 +1,26 @@
 CREATE DATABASE IF NOT EXISTS hair_clinic_system;
 USE hair_clinic_system;
 
-CREATE TABLE IF NOT EXISTS admins (
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(150) NOT NULL,
     role ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS doctors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    specialization VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    email VARCHAR(150),
+    license_number VARCHAR(80) NOT NULL UNIQUE,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS patients (
@@ -84,7 +97,20 @@ CREATE TABLE IF NOT EXISTS inventory_orders (
     FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE
 );
 
-INSERT INTO admins (username, password, full_name, role) VALUES
+CREATE TABLE IF NOT EXISTS reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_type VARCHAR(80) NOT NULL,
+    period_type ENUM('Daily','Weekly','Monthly','Custom') NOT NULL DEFAULT 'Daily',
+    title VARCHAR(180) NOT NULL,
+    generated_by INT NULL,
+    date_from DATE NOT NULL,
+    date_to DATE NOT NULL,
+    summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+INSERT INTO users (username, password, full_name, role) VALUES
 ('admin', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'System Administrator', 'Administrator'),
 ('receptionist', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Amina Receptionist', 'Receptionist'),
 ('doctor', '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q', 'Dr. Sarah Jenkins', 'Doctor'),
@@ -92,6 +118,23 @@ INSERT INTO admins (username, password, full_name, role) VALUES
 ON DUPLICATE KEY UPDATE
 full_name = VALUES(full_name),
 role = VALUES(role);
+
+INSERT INTO doctors (user_id, full_name, specialization, phone, email, license_number, status)
+SELECT id, full_name, 'Hair Restoration Specialist', '+1 (555) 010-8821', 'doctor@hairclinic.test', 'HC-MD-1001', 'Active'
+FROM users
+WHERE username = 'doctor'
+ON DUPLICATE KEY UPDATE
+full_name = VALUES(full_name),
+specialization = VALUES(specialization),
+phone = VALUES(phone),
+email = VALUES(email),
+status = VALUES(status);
+
+INSERT INTO reports (report_type, period_type, title, generated_by, date_from, date_to, summary)
+SELECT 'System Activity', 'Monthly', 'October System Activity Report', id, '2023-10-01', '2023-10-31', 'Sample stored report record. Live reports are still generated from operational tables.'
+FROM users
+WHERE username = 'admin'
+LIMIT 1;
 
 INSERT INTO patients (id, full_name, phone, email, gender, date_of_birth, address, medical_notes, created_at) VALUES
 (1, 'Alexander Wright', '+44 7700 900 123', 'a.wright.tech@email.com', 'Male', '1989-04-16', '24 Baker Street, Marylebone, London NW1 6XE', 'Allergies: Penicillin, Latex. Past conditions: Hypertension managed, minor scalp eczema in 2021. Family history: paternal male pattern baldness Grade IV.', '2023-10-24 09:12:00'),
@@ -110,6 +153,10 @@ gender = VALUES(gender),
 date_of_birth = VALUES(date_of_birth),
 address = VALUES(address),
 medical_notes = VALUES(medical_notes);
+
+UPDATE patients
+SET assigned_doctor_id = (SELECT id FROM users WHERE username = 'doctor' LIMIT 1)
+WHERE assigned_doctor_id IS NULL;
 
 INSERT INTO treatments (id, patient_id, treatment_name, treatment_date, progress, cost, notes, created_at) VALUES
 (1, 1, 'FUE Hair Restoration', '2023-10-24', 'In Progress', 4200.00, 'Follicular Unit Extraction focused on frontal hairline and crown areas. Target: 2,500 grafts across high-density zones.', '2023-10-24 15:30:00'),

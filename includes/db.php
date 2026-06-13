@@ -31,8 +31,59 @@ function ensure_column($conn, $table, $column, $definition)
     }
 }
 
-ensure_column($conn, 'admins', 'role', "ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator'");
+function table_exists($conn, $table)
+{
+    $stmt = $conn->prepare(
+        'SELECT COUNT(*) total FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
+    );
+    $stmt->bind_param('s', $table);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+
+    return (int) $row['total'] > 0;
+}
+
+if (table_exists($conn, 'admins') && !table_exists($conn, 'users')) {
+    $conn->query('RENAME TABLE admins TO users');
+}
+
+$conn->query("CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    role ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
+ensure_column($conn, 'users', 'role', "ENUM('Administrator','Receptionist','Doctor','Inventory Officer') NOT NULL DEFAULT 'Administrator'");
 ensure_column($conn, 'patients', 'assigned_doctor_id', 'INT NULL');
+
+$conn->query("CREATE TABLE IF NOT EXISTS doctors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    specialization VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    email VARCHAR(150),
+    license_number VARCHAR(80) NOT NULL UNIQUE,
+    status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+)");
+
+$conn->query("CREATE TABLE IF NOT EXISTS reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    report_type VARCHAR(80) NOT NULL,
+    period_type ENUM('Daily','Weekly','Monthly','Custom') NOT NULL DEFAULT 'Daily',
+    title VARCHAR(180) NOT NULL,
+    generated_by INT NULL,
+    date_from DATE NOT NULL,
+    date_to DATE NOT NULL,
+    summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL
+)");
 
 $conn->query("CREATE TABLE IF NOT EXISTS inventory_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,7 +112,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS inventory_orders (
 
 $default_password_hash = '$2y$10$we9pFfF6WmRthWYXJNIP7OIk0Y5/gxDfEagOyGw8b501ow4P5RS4q';
 $stmt = $conn->prepare(
-    'INSERT INTO admins (username, password, full_name, role) VALUES (?, ?, ?, ?)
+    'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE username = username'
 );
 $default_users = [
@@ -75,8 +126,14 @@ foreach ($default_users as $default_user) {
     $stmt->execute();
 }
 
+$conn->query("INSERT INTO doctors (user_id, full_name, specialization, phone, email, license_number, status)
+    SELECT u.id, u.full_name, 'Hair Restoration Specialist', '+1 (555) 010-8821', 'doctor@hairclinic.test', 'HC-MD-1001', 'Active'
+    FROM users u
+    WHERE u.username = 'doctor'
+    AND NOT EXISTS (SELECT 1 FROM doctors d WHERE d.license_number = 'HC-MD-1001')");
+
 $conn->query("UPDATE patients
-    SET assigned_doctor_id = (SELECT id FROM admins WHERE username = 'doctor' LIMIT 1)
+    SET assigned_doctor_id = (SELECT id FROM users WHERE username = 'doctor' LIMIT 1)
     WHERE assigned_doctor_id IS NULL");
 
 if (!defined('BASE_URL')) {

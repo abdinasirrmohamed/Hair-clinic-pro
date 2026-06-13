@@ -2,7 +2,8 @@
 require_once __DIR__ . '/includes/auth.php';
 require_access('dashboard');
 
-$total_users = count_table($conn, 'SELECT COUNT(*) FROM admins');
+$total_users = count_table($conn, 'SELECT COUNT(*) FROM users');
+$total_doctors = count_table($conn, 'SELECT COUNT(*) FROM doctors');
 $total_patients = count_table($conn, 'SELECT COUNT(*) FROM patients');
 $total_appointments = count_table($conn, 'SELECT COUNT(*) FROM appointments');
 $total_treatments = count_table($conn, 'SELECT COUNT(*) FROM treatments');
@@ -29,6 +30,7 @@ $dashboard_profiles = [
         'subtitle' => 'Full system overview, activity, and management controls.',
         'metrics' => [
             ['label' => 'Total Users', 'value' => $total_users, 'icon' => 'bi-people', 'tone' => 'blue', 'chip' => 'Full Access', 'chipTone' => 'green'],
+            ['label' => 'Total Doctors', 'value' => $total_doctors, 'icon' => 'bi-person-badge', 'tone' => 'mint', 'chip' => 'Clinical Team', 'chipTone' => 'neutral'],
             ['label' => 'Total Patients', 'value' => $total_patients, 'icon' => 'bi-person-vcard', 'tone' => 'blue', 'chip' => '+12%', 'chipTone' => 'green'],
             ['label' => 'Total Appointments', 'value' => $total_appointments, 'icon' => 'bi-calendar3', 'tone' => 'blue', 'chip' => 'Live', 'chipTone' => 'neutral'],
             ['label' => 'Total Treatments', 'value' => $total_treatments, 'icon' => 'bi-scissors', 'tone' => 'mint', 'chip' => 'Clinical', 'chipTone' => 'neutral'],

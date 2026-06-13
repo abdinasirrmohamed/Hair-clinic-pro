@@ -24,7 +24,7 @@ function role_key($role = null)
 function role_permissions()
 {
     return [
-        'Administrator' => ['dashboard', 'users', 'patients', 'appointments', 'treatments', 'followups', 'inventory', 'reports'],
+        'Administrator' => ['dashboard', 'users', 'doctors', 'patients', 'appointments', 'treatments', 'followups', 'inventory', 'reports'],
         'Receptionist' => ['dashboard', 'patients', 'appointments', 'reports'],
         'Doctor' => ['dashboard', 'patients', 'treatments', 'followups', 'reports'],
         'Inventory Officer' => ['dashboard', 'inventory', 'reports'],
@@ -107,6 +107,7 @@ function role_menu_items()
     $items = [
         ['module' => 'dashboard', 'href' => '/dashboard.php', 'icon' => 'bi-grid', 'label' => 'Dashboard'],
         ['module' => 'users', 'href' => '/users/view.php', 'icon' => 'bi-people', 'label' => 'Users'],
+        ['module' => 'doctors', 'href' => '/doctors/view.php', 'icon' => 'bi-person-badge', 'label' => 'Doctors'],
         ['module' => 'patients', 'href' => '/patients/view.php', 'icon' => 'bi-person', 'label' => 'Patients'],
         ['module' => 'appointments', 'href' => '/appointments/view.php', 'icon' => 'bi-calendar3', 'label' => 'Appointments'],
         ['module' => 'treatments', 'href' => '/treatments/view.php', 'icon' => 'bi-scissors', 'label' => 'Treatments'],
