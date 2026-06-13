@@ -57,9 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<div class="page-head"><h1 class="h3 mb-0">Book Appointment</h1></div>
-<form class="form-panel" method="post">
-    <div class="row g-3">
+<div class="patient-head">
+    <div><h1>New Appointment</h1><p>Book an appointment for an existing patient or register a new patient in one workflow.</p></div>
+    <a class="add-patient-btn" href="view.php"><i class="bi bi-list-ul"></i>Appointment List</a>
+</div>
+<section class="patient-management-card">
+    <div class="patient-tabs"><div class="tab-links"><a href="view.php">Appointments</a><a class="active" href="add.php">New Appointment</a></div></div>
+<form class="p-4" method="post">
+    <div class="row g-4">
         <div class="col-12">
             <label class="form-label">Patient Type</label>
             <div class="inline-choice">
@@ -86,8 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status"><option>Pending</option><option>Approved</option><option>Rejected</option><option>Completed</option><option>Cancelled</option></select></div>
         <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="4"></textarea></div>
     </div>
-    <div class="mt-4"><button class="btn btn-primary">Save Appointment</button> <a class="btn btn-secondary" href="view.php">Cancel</a></div>
+    <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-calendar-check"></i> Save Appointment</button> <a class="btn btn-secondary" href="view.php">Cancel</a></div>
 </form>
+</section>
 <script>
 document.querySelectorAll('input[name="patient_mode"]').forEach((input) => {
     input.addEventListener('change', () => {

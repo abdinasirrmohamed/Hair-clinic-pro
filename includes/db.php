@@ -213,7 +213,9 @@ $conn->query("CREATE TABLE IF NOT EXISTS pharmacy_sales (
     total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
     payment_method ENUM('Cash','EVC Plus','Sahal','Bank Transfer') NOT NULL,
     payment_status ENUM('Paid','Partial','Outstanding') NOT NULL DEFAULT 'Paid',
-    status ENUM('Paid','Pending','Cancelled') NOT NULL DEFAULT 'Paid',
+    status ENUM('Paid','Pending','Cancelled','Returned') NOT NULL DEFAULT 'Paid',
+    returned_at DATETIME NULL,
+    return_reason TEXT NULL,
     notes TEXT,
     created_by INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -221,6 +223,9 @@ $conn->query("CREATE TABLE IF NOT EXISTS pharmacy_sales (
     FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 )");
+ensure_column($conn, 'pharmacy_sales', 'returned_at', 'DATETIME NULL');
+ensure_column($conn, 'pharmacy_sales', 'return_reason', 'TEXT NULL');
+$conn->query("ALTER TABLE pharmacy_sales MODIFY status ENUM('Paid','Pending','Cancelled','Returned') NOT NULL DEFAULT 'Paid'");
 
 $conn->query("CREATE TABLE IF NOT EXISTS pharmacy_sale_medicines (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -354,6 +359,19 @@ function fetch_all($stmt)
 {
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function bind_params($stmt, $types, array &$params)
+{
+    if ($types === '') {
+        return;
+    }
+
+    $bind = [$types];
+    foreach ($params as $key => $value) {
+        $bind[] = &$params[$key];
+    }
+    call_user_func_array([$stmt, 'bind_param'], $bind);
 }
 
 function fetch_one($stmt)

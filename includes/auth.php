@@ -118,7 +118,7 @@ function role_menu_items()
         ['module' => 'followups', 'href' => '/followups/view.php', 'icon' => 'bi-clipboard2-check', 'label' => 'Follow-Ups'],
         ['module' => 'prescriptions', 'href' => '/prescriptions/view.php', 'icon' => 'bi-prescription2', 'label' => 'Prescriptions'],
         ['module' => 'inventory', 'href' => '/inventory/index.php', 'icon' => 'bi-archive', 'label' => 'Inventory'],
-        ['module' => 'pharmacy', 'href' => '/pharmacy/dashboard.php', 'icon' => 'bi-capsule', 'label' => 'Pharmacy'],
+        ['module' => 'pharmacy', 'href' => '/pharmacy/medicines.php', 'icon' => 'bi-capsule', 'label' => 'Pharmacy'],
         ['module' => 'reports', 'href' => '/reports/index.php', 'icon' => 'bi-graph-up', 'label' => 'Reports'],
     ];
 

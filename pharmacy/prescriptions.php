@@ -26,7 +26,7 @@ $prescriptions = $conn->query("SELECT rx.*, p.full_name patient_name, p.phone, d
 </div>
 
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="dashboard.php">Dashboard</a><a href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a class="active" href="prescriptions.php">Prescriptions</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a class="active" href="prescriptions.php">Prescriptions</a><a href="sales_history.php">Sales History</a><a href="reports.php">Reports</a></div></div>
     <form class="p-3 border-bottom" method="get">
         <div class="d-flex gap-2 flex-wrap">
             <?php foreach (['Pending', 'Dispensed', 'Completed', 'All'] as $option): ?>

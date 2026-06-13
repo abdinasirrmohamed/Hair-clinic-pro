@@ -1,186 +1,202 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('appointments');
+$page_title = 'Appointments';
+require_once __DIR__ . '/../includes/header.php';
 
 $search = trim($_GET['search'] ?? '');
-$latest = $conn->query('SELECT appointment_date FROM appointments ORDER BY appointment_date DESC LIMIT 1')->fetch_assoc();
-$default_month = $latest ? date('Y-m', strtotime($latest['appointment_date'])) : date('Y-m');
-$month = preg_match('/^\d{4}-\d{2}$/', $_GET['month'] ?? '') ? $_GET['month'] : $default_month;
-$month_start = $month . '-01';
-$month_label = date('F Y', strtotime($month_start));
-$prev_month = date('Y-m', strtotime($month_start . ' -1 month'));
-$next_month = date('Y-m', strtotime($month_start . ' +1 month'));
-$today_month = date('Y-m');
+$status = $_GET['status'] ?? 'All';
+$doctor_id = (int) ($_GET['doctor_id'] ?? 0);
+$date_from = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date_from'] ?? '') ? $_GET['date_from'] : '';
+$date_to = preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date_to'] ?? '') ? $_GET['date_to'] : '';
+$selected_id = (int) ($_GET['id'] ?? 0);
 
-$selected_date = $_GET['date'] ?? '';
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selected_date) || date('Y-m', strtotime($selected_date)) !== $month) {
-    $first_with_appt = $conn->query("SELECT appointment_date FROM appointments WHERE DATE_FORMAT(appointment_date, '%Y-%m') = '" . $conn->real_escape_string($month) . "' ORDER BY appointment_date ASC LIMIT 1")->fetch_assoc();
-    $selected_date = $first_with_appt['appointment_date'] ?? $month_start;
-}
+$doctors = $conn->query("SELECT id, full_name, specialization FROM doctors WHERE status = 'Active' ORDER BY full_name")->fetch_all(MYSQLI_ASSOC);
+$where = 'WHERE 1=1';
+$types = '';
+$params = [];
 
-$where_search = '';
-if ($search !== '') {
-    $where_search = ' AND (p.full_name LIKE ? OR a.reason LIKE ? OR a.status LIKE ?)';
-}
-
-$stmt = $conn->prepare(
-    "SELECT a.*, p.full_name, p.id AS patient_code
-     FROM appointments a
-     JOIN patients p ON p.id = a.patient_id
-     WHERE DATE_FORMAT(a.appointment_date, '%Y-%m') = ? $where_search
-     ORDER BY a.appointment_date ASC, a.appointment_time ASC"
-);
 if ($search !== '') {
     $like = '%' . $search . '%';
-    $stmt->bind_param('ssss', $month, $like, $like, $like);
-} else {
-    $stmt->bind_param('s', $month);
-}
-$month_appointments = fetch_all($stmt);
-
-$appointments_by_date = [];
-foreach ($month_appointments as $appointment) {
-    $appointments_by_date[$appointment['appointment_date']][] = $appointment;
+    $where .= ' AND (p.full_name LIKE ? OR p.phone LIKE ? OR a.reason LIKE ? OR a.notes LIKE ? OR d.full_name LIKE ?)';
+    $types .= 'sssss';
+    array_push($params, $like, $like, $like, $like, $like);
 }
 
-$selected_appointments = $appointments_by_date[$selected_date] ?? [];
-$first_day_offset = (int) date('w', strtotime($month_start));
-$days_in_month = (int) date('t', strtotime($month_start));
-$calendar_start = date('Y-m-d', strtotime($month_start . ' -' . $first_day_offset . ' days'));
-
-function calendar_initials($name)
-{
-    $parts = preg_split('/\s+/', trim($name));
-    $first = strtoupper(substr($parts[0] ?? '', 0, 1));
-    $last = strtoupper(substr($parts[count($parts) - 1] ?? '', 0, 1));
-    return $first . ($last !== $first ? $last : '');
+if (in_array($status, ['Pending', 'Approved', 'Rejected', 'Completed', 'Cancelled'], true)) {
+    $where .= ' AND a.status = ?';
+    $types .= 's';
+    $params[] = $status;
 }
 
-function calendar_status_class($status)
-{
-    if ($status === 'Completed') {
-        return 'completed';
+if ($doctor_id > 0) {
+    $where .= ' AND a.doctor_id = ?';
+    $types .= 'i';
+    $params[] = $doctor_id;
+}
+
+if ($date_from !== '') {
+    $where .= ' AND a.appointment_date >= ?';
+    $types .= 's';
+    $params[] = $date_from;
+}
+
+if ($date_to !== '') {
+    $where .= ' AND a.appointment_date <= ?';
+    $types .= 's';
+    $params[] = $date_to;
+}
+
+$sql = "SELECT a.*, p.full_name patient_name, p.phone, p.email, p.gender, d.full_name doctor_name, d.specialization
+    FROM appointments a
+    JOIN patients p ON p.id = a.patient_id
+    LEFT JOIN doctors d ON d.id = a.doctor_id
+    $where
+    ORDER BY a.appointment_date DESC, a.appointment_time DESC
+    LIMIT 100";
+$stmt = $conn->prepare($sql);
+if ($types !== '') {
+    bind_params($stmt, $types, $params);
+}
+$appointments = fetch_all($stmt);
+
+if ($selected_id <= 0 && $appointments) {
+    $selected_id = (int) $appointments[0]['id'];
+}
+
+$selected = null;
+foreach ($appointments as $appointment) {
+    if ((int) $appointment['id'] === $selected_id) {
+        $selected = $appointment;
+        break;
     }
-    if ($status === 'Cancelled') {
-        return 'cancelled';
-    }
-    return 'pending';
 }
 
-function calendar_event_label($appointment)
+if (!$selected && $selected_id > 0) {
+    $stmt = $conn->prepare('SELECT a.*, p.full_name patient_name, p.phone, p.email, p.gender, d.full_name doctor_name, d.specialization
+        FROM appointments a
+        JOIN patients p ON p.id = a.patient_id
+        LEFT JOIN doctors d ON d.id = a.doctor_id
+        WHERE a.id = ?');
+    $stmt->bind_param('i', $selected_id);
+    $selected = fetch_one($stmt);
+}
+
+$status_counts = [
+    'Pending' => count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Pending'"),
+    'Approved' => count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Approved'"),
+    'Completed' => count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Completed'"),
+    'Cancelled' => count_table($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'Cancelled'"),
+];
+
+function appointment_badge_class($status)
 {
-    return date('H:i', strtotime($appointment['appointment_time'])) . ' ' . $appointment['full_name'];
+    if ($status === 'Completed' || $status === 'Approved') {
+        return 'active';
+    }
+    if ($status === 'Cancelled' || $status === 'Rejected') {
+        return 'inactive';
+    }
+    return 'upcoming';
+}
+
+function appointment_query(array $overrides = [])
+{
+    $query = array_merge($_GET, $overrides);
+    return http_build_query(array_filter($query, fn($value) => $value !== '' && $value !== null));
 }
 ?>
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Appointment Calendar</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">
-</head>
-<body class="dashboard-shell">
-    <?php render_role_sidebar($_SERVER['SCRIPT_NAME'] ?? ''); ?>
+<div class="patient-head">
+    <div><h1>Appointments</h1><p>Advanced appointment list for reception, scheduling, and follow-up actions.</p></div>
+    <a class="add-patient-btn" href="add.php"><i class="bi bi-plus-lg"></i>New Appointment</a>
+</div>
 
-    <section class="clinic-main">
-        <header class="clinic-topbar calendar-topbar">
-            <h1>Hair Clinic Management</h1>
-            <form class="top-search calendar-search" method="get">
-                <input type="hidden" name="month" value="<?= e($month) ?>">
-                <i class="bi bi-search"></i>
-                <input name="search" value="<?= e($search) ?>" placeholder="Search appointments, patients...">
-            </form>
-            <div class="top-actions admin-profile">
-                <button type="button" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-                <button type="button" aria-label="Help"><i class="bi bi-question-circle"></i></button>
-                <span class="profile-divider"></span>
-                <div class="admin-avatar"><?= e(calendar_initials($_SESSION['admin_name'] ?? 'Admin User')) ?></div>
-                <span class="admin-copy"><strong><?= e($_SESSION['admin_name'] ?? 'Admin User') ?></strong><small><?= e(current_role()) ?></small></span>
-            </div>
-        </header>
+<div class="patient-metrics">
+    <?php foreach ($status_counts as $label => $value): ?>
+        <article class="patient-metric"><div><p><?= e($label) ?></p><strong><?= number_format($value) ?></strong></div><span class="metric-icon <?= $label === 'Cancelled' ? 'red' : ($label === 'Pending' ? 'blue' : 'mint') ?>"><i class="bi bi-calendar-check"></i></span></article>
+    <?php endforeach; ?>
+</div>
 
-        <main class="clinic-content calendar-content">
-            <?php show_flash(); ?>
-            <div class="calendar-toolbar">
-                <h2><?= e($month_label) ?></h2>
-                <div class="calendar-nav">
-                    <a href="view.php?month=<?= e($prev_month) ?>"><i class="bi bi-chevron-left"></i></a>
-                    <a class="today" href="view.php?month=<?= e($today_month) ?>">Today</a>
-                    <a href="view.php?month=<?= e($next_month) ?>"><i class="bi bi-chevron-right"></i></a>
-                </div>
-                <div class="calendar-view-tabs">
-                    <button class="active" type="button">Month</button>
-                    <button type="button">Week</button>
-                    <button type="button">Day</button>
-                </div>
-            </div>
+<section class="appointment-list-shell">
+    <div class="appointment-list-header">
+        <div>
+            <h2>Appointment Worklist</h2>
+            <p><?= number_format(count($appointments)) ?> records showing</p>
+        </div>
+        <a href="add.php"><i class="bi bi-calendar-plus"></i> Book New</a>
+    </div>
 
-            <div class="calendar-layout">
-                <section class="month-calendar">
-                    <div class="calendar-weekdays">
-                        <?php foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $weekday): ?>
-                            <span><?= $weekday ?></span>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="calendar-grid">
-                        <?php for ($i = 0; $i < 42; $i++): ?>
-                            <?php
-                            $cell_date = date('Y-m-d', strtotime($calendar_start . " +$i days"));
-                            $in_month = date('Y-m', strtotime($cell_date)) === $month;
-                            $day_appointments = $appointments_by_date[$cell_date] ?? [];
-                            $is_selected = $cell_date === $selected_date;
-                            ?>
-                            <a class="calendar-cell <?= !$in_month ? 'muted' : '' ?> <?= $is_selected ? 'selected' : '' ?>" href="view.php?month=<?= e($month) ?>&date=<?= e($cell_date) ?>">
-                                <strong><?= e(date('j', strtotime($cell_date))) ?></strong>
-                                <div class="calendar-events">
-                                    <?php foreach (array_slice($day_appointments, 0, 3) as $appointment): ?>
-                                        <span class="<?= e(calendar_status_class($appointment['status'])) ?>"><?= e(calendar_event_label($appointment)) ?></span>
-                                    <?php endforeach; ?>
-                                    <?php if (count($day_appointments) > 3): ?>
-                                        <em>+<?= count($day_appointments) - 3 ?> more</em>
-                                    <?php endif; ?>
-                                </div>
-                            </a>
-                        <?php endfor; ?>
-                    </div>
-                </section>
+    <form class="appointment-list-toolbar" method="get">
+        <label class="appointment-search-box"><i class="bi bi-search"></i><input name="search" value="<?= e($search) ?>" placeholder="Search patient, phone, doctor, reason..."></label>
+        <select name="status">
+            <?php foreach (['All', 'Pending', 'Approved', 'Rejected', 'Completed', 'Cancelled'] as $option): ?>
+                <option value="<?= e($option) ?>" <?= $status === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <select name="doctor_id">
+            <option value="0">All Doctors</option>
+            <?php foreach ($doctors as $doctor): ?>
+                <option value="<?= (int) $doctor['id'] ?>" <?= $doctor_id === (int) $doctor['id'] ? 'selected' : '' ?>><?= e($doctor['full_name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <input type="date" name="date_from" value="<?= e($date_from) ?>">
+        <input type="date" name="date_to" value="<?= e($date_to) ?>">
+        <button type="submit"><i class="bi bi-funnel"></i> Filter</button>
+    </form>
 
-                <aside class="calendar-day-panel">
-                    <div class="day-panel-head">
+    <div class="appointment-workspace">
+        <div class="appointment-list-panel">
+            <?php foreach ($appointments as $appointment): ?>
+                <?php $active = (int) $appointment['id'] === $selected_id ? 'active' : ''; ?>
+                <a class="appointment-list-item <?= e($active) ?>" href="view.php?<?= e(appointment_query(['id' => $appointment['id']])) ?>">
+                    <time>
+                        <strong><?= e(date('h:i', strtotime($appointment['appointment_time']))) ?></strong>
+                        <span><?= e(date('A', strtotime($appointment['appointment_time']))) ?></span>
+                    </time>
+                    <div class="appointment-list-main">
                         <div>
-                            <h2><?= e(date('l, M j', strtotime($selected_date))) ?></h2>
-                            <p><?= count($selected_appointments) ?> appointments scheduled</p>
+                            <h3><?= e($appointment['patient_name']) ?></h3>
+                            <p><?= e($appointment['reason']) ?></p>
+                            <small><i class="bi bi-calendar3"></i><?= e(date('M j, Y', strtotime($appointment['appointment_date']))) ?> · <?= e($appointment['doctor_name'] ?: 'No doctor assigned') ?></small>
                         </div>
-                        <i class="bi bi-three-dots-vertical"></i>
+                        <em class="status-pill <?= e(appointment_badge_class($appointment['status'])) ?>"><?= e($appointment['status']) ?></em>
                     </div>
-                    <div class="day-appointments">
-                        <?php foreach ($selected_appointments as $appointment): ?>
-                            <?php $class = calendar_status_class($appointment['status']); ?>
-                            <article class="day-card <?= e($class) ?>">
-                                <div class="day-card-meta">
-                                    <span><i></i><?= e(strtoupper($appointment['status'])) ?></span>
-                                    <time><?= e(date('h:i A', strtotime($appointment['appointment_time']))) ?></time>
-                                </div>
-                                <h3><?= e($appointment['full_name']) ?></h3>
-                                <p><?= e($appointment['reason']) ?></p>
-                                <div class="day-card-footer">
-                                    <span class="mini-team"><b><?= e(calendar_initials($appointment['full_name'])) ?></b><b>DR</b></span>
-                                    <a href="edit.php?id=<?= $appointment['id'] ?>"><?= $appointment['status'] === 'Pending' ? 'Check-in' : 'View Notes' ?></a>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                        <?php if (!$selected_appointments): ?>
-                            <div class="empty-state">No appointments for this day.</div>
-                        <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+            <?php if (!$appointments): ?><div class="empty-state">No appointments match the selected filters.</div><?php endif; ?>
+        </div>
+
+        <aside class="appointment-detail-panel">
+            <?php if ($selected): ?>
+                <div class="appointment-detail-head">
+                    <div>
+                        <span class="status-pill <?= e(appointment_badge_class($selected['status'])) ?>"><?= e($selected['status']) ?></span>
+                        <h2><?= e($selected['patient_name']) ?></h2>
+                        <p><?= e($selected['reason']) ?></p>
                     </div>
-                    <a class="schedule-selected-day" href="add.php?date=<?= e($selected_date) ?>"><i class="bi bi-plus-lg"></i>Schedule for <?= e(date('M j', strtotime($selected_date))) ?></a>
-                </aside>
-            </div>
-        </main>
-    </section>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+                    <a href="edit.php?id=<?= (int) $selected['id'] ?>"><i class="bi bi-pencil-square"></i>Edit</a>
+                </div>
+                <div class="appointment-detail-grid">
+                    <div><span>Date</span><strong><?= e(date('M j, Y', strtotime($selected['appointment_date']))) ?></strong></div>
+                    <div><span>Time</span><strong><?= e(date('h:i A', strtotime($selected['appointment_time']))) ?></strong></div>
+                    <div><span>Doctor</span><strong><?= e($selected['doctor_name'] ?: 'Unassigned') ?></strong><small><?= e($selected['specialization'] ?: '') ?></small></div>
+                    <div><span>Phone</span><strong><?= e($selected['phone']) ?></strong></div>
+                    <div><span>Email</span><strong><?= e($selected['email'] ?: 'Not provided') ?></strong></div>
+                    <div><span>Gender</span><strong><?= e($selected['gender']) ?></strong></div>
+                </div>
+                <div class="appointment-notes-box">
+                    <h3>Appointment Notes</h3>
+                    <p><?= e($selected['notes'] ?: 'No appointment notes recorded yet.') ?></p>
+                    <?php if (!empty($selected['remarks'])): ?><p><strong>Doctor Remarks:</strong> <?= e($selected['remarks']) ?></p><?php endif; ?>
+                </div>
+                <div class="appointment-detail-actions">
+                    <a class="btn btn-primary" href="edit.php?id=<?= (int) $selected['id'] ?>"><i class="bi bi-check2-circle"></i>Manage Appointment</a>
+                    <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/patients/profile.php?id=<?= (int) $selected['patient_id'] ?>"><i class="bi bi-person-vcard"></i>Patient Profile</a>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">Select an appointment to view details.</div>
+            <?php endif; ?>
+        </aside>
+    </div>
+</section>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

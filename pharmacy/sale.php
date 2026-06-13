@@ -109,11 +109,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <div class="patient-head">
     <div><h1>Pharmacy POS</h1><p>Create direct walk-in medicine sales with live totals and stock checks.</p></div>
-    <a class="add-patient-btn" href="dashboard.php"><i class="bi bi-speedometer2"></i>Dashboard</a>
+    <a class="add-patient-btn" href="sales_history.php"><i class="bi bi-clock-history"></i>Sales History</a>
 </div>
 
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="dashboard.php">Dashboard</a><a href="medicines.php">Medicines</a><a class="active" href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Medicines</a><a class="active" href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="sales_history.php">Sales History</a><a href="reports.php">Reports</a></div></div>
     <form method="post" id="posForm" class="p-4">
         <div class="row g-3 mb-4">
             <div class="col-md-4">

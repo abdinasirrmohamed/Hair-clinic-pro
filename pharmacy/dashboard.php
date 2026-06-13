@@ -35,7 +35,7 @@ $pending_rx = $conn->query("SELECT rx.*, p.full_name patient_name, d.full_name d
 </div>
 
 <section class="patient-management-card mb-4">
-    <div class="patient-tabs"><div class="tab-links"><a class="active" href="dashboard.php">Dashboard</a><a href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="sales_history.php">Sales History</a><a href="reports.php">Reports</a></div></div>
     <div class="patient-list-grid patient-list-head" style="grid-template-columns: 1fr 1.3fr .8fr .8fr .9fr .8fr;">
         <span>Sale Number</span><span>Customer</span><span>Items</span><span>Total</span><span>Payment</span><span>Status</span>
     </div>

@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['admin_name'] = $admin['full_name'];
         $_SESSION['admin_role'] = $admin['role'];
         if ($admin['role'] === 'Pharmacy User') {
-            redirect('/pharmacy/dashboard.php');
+            redirect('/pharmacy/medicines.php');
         }
         redirect('/dashboard.php');
     }

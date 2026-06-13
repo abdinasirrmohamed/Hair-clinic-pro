@@ -21,7 +21,7 @@ if ($search !== '') {
 </div>
 <form class="top-search patient-search mb-4" method="get" style="width:100%;max-width:620px;"><i class="bi bi-search"></i><input name="search" value="<?= e($search) ?>" placeholder="Search medicines, category, supplier..."></form>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="dashboard.php">Dashboard</a><a class="active" href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a class="active" href="medicines.php">Medicines</a><a href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="sales_history.php">Sales History</a><a href="reports.php">Reports</a></div></div>
     <div class="patient-list-grid patient-list-head" style="grid-template-columns: 1.4fr 1fr .7fr .8fr .9fr 1fr .7fr;">
         <span>Name</span><span>Category</span><span>Qty</span><span>Price</span><span>Expiry</span><span>Supplier</span><span>Actions</span>
     </div>

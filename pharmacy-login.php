@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 
 if (is_logged_in()) {
-    redirect(current_role() === 'Pharmacy User' ? '/pharmacy/dashboard.php' : '/dashboard.php');
+    redirect(current_role() === 'Pharmacy User' ? '/pharmacy/medicines.php' : '/dashboard.php');
 }
 
 $error = '';
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['admin_name'] = $user['full_name'];
         $_SESSION['admin_role'] = $user['role'];
-        redirect('/pharmacy/dashboard.php');
+        redirect('/pharmacy/medicines.php');
     }
 
     $error = 'Invalid pharmacy username or password.';

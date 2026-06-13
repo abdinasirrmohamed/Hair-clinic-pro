@@ -131,7 +131,7 @@ $appointment_hub_sql = "SELECT a.*, p.full_name, p.phone
     LIMIT 12";
 $stmt = $conn->prepare($appointment_hub_sql);
 if ($appointment_types !== '') {
-    $stmt->bind_param($appointment_types, ...$appointment_params);
+    bind_params($stmt, $appointment_types, $appointment_params);
 }
 $dashboard_appointments = fetch_all($stmt);
 $hub_total = count($dashboard_appointments);
@@ -304,7 +304,7 @@ function appointment_status_class($status)
 
             <?php if (current_role() === 'Pharmacy User'): ?>
                 <section class="patient-management-card">
-                    <div class="patient-tabs"><div class="tab-links"><a class="active" href="<?= BASE_URL ?>/pharmacy/dashboard.php">Pharmacy Workbench</a><a href="<?= BASE_URL ?>/pharmacy/sale.php">New Sale</a><a href="<?= BASE_URL ?>/pharmacy/prescriptions.php">Prescriptions</a><a href="<?= BASE_URL ?>/pharmacy/reports.php">Reports</a></div></div>
+                    <div class="patient-tabs"><div class="tab-links"><a class="active" href="<?= BASE_URL ?>/pharmacy/medicines.php">Medicines</a><a href="<?= BASE_URL ?>/pharmacy/sale.php">New Sale</a><a href="<?= BASE_URL ?>/pharmacy/prescriptions.php">Prescriptions</a><a href="<?= BASE_URL ?>/pharmacy/sales_history.php">Sales History</a><a href="<?= BASE_URL ?>/pharmacy/reports.php">Reports</a></div></div>
                     <div class="p-4">
                         <div class="row g-3">
                             <div class="col-md-4"><a class="btn btn-primary w-100 py-3" href="<?= BASE_URL ?>/pharmacy/sale.php"><i class="bi bi-cart-plus"></i> Create Direct Sale</a></div>
