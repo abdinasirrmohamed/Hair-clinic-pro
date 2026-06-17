@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $id = (int) ($_GET['id'] ?? 0);
@@ -8,3 +8,4 @@ $stmt->execute();
 log_activity('Deleted inventory item', 'Inventory', $id);
 flash('success', 'Inventory item deleted.');
 redirect('/inventory/medicines.php');
+

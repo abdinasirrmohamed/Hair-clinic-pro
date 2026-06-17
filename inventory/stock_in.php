@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $is_purchase_page = basename($_SERVER['SCRIPT_NAME'] ?? '') === 'purchase.php';
@@ -41,7 +41,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="patient-head"><div><h1><?= $is_purchase_page ? 'Purchase / Delivered Stock' : 'Stock In Management' ?></h1><p>Record purchased or delivered medicine stock and automatically update pharmacy medicine quantity.</p></div></div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Inventory Items</a><a class="<?= $is_purchase_page ? 'active' : '' ?>" href="purchase.php">Purchase</a><a class="<?= !$is_purchase_page ? 'active' : '' ?>" href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a href="medicines.php">Medicines</a><a class="<?= $is_purchase_page ? 'active' : '' ?>" href="purchase.php">Purchase</a><a class="<?= !$is_purchase_page ? 'active' : '' ?>" href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
     <div class="row g-4 p-4">
         <div class="col-lg-5"><form class="form-panel m-0" method="post" enctype="multipart/form-data">
             <div class="row g-3">
@@ -60,3 +60,4 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

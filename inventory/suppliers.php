@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 
@@ -45,7 +45,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="patient-head"><div><h1>Supplier Management</h1><p>Manage companies providing medicines and medical supplies.</p></div></div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Inventory Items</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a class="active" href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a href="medicines.php">Medicines</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a class="active" href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
     <div class="row g-4 p-4">
         <div class="col-lg-4">
             <form class="form-panel m-0" method="post">
@@ -95,3 +95,4 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

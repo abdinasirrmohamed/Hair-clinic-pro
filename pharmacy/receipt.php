@@ -47,7 +47,17 @@ require_once __DIR__ . '/../includes/header.php';
 
         <div class="row g-3 mb-4">
             <div class="col-md-4"><strong>Customer</strong><p class="mb-0"><?= e($sale['customer_name'] ?: ($sale['patient_name'] ?: 'Walk-in Customer')) ?></p></div>
-            <div class="col-md-4"><strong>Payment Method</strong><p class="mb-0"><?= e($sale['payment_method']) ?></p></div>
+            <div class="col-md-4">
+                <strong>Payment Method</strong>
+                <p class="mb-0"><?= e($sale['payment_method']) ?>
+                <?php if (str_contains((string) $sale['notes'], 'WAAFI TX:')): ?>
+                    <br><small class="text-success"><i class="bi bi-check-circle-fill"></i>
+                    <?= preg_match('/WAAFI TX: ([^\s]+)/', (string) $sale['notes'], $m) ? 'TX: ' . e($m[1]) : '' ?>
+                    <?= str_starts_with($m[1] ?? '', 'TEST-') ? '<span class="badge bg-warning text-dark">TEST MODE</span>' : '' ?>
+                    </small>
+                <?php endif; ?>
+                </p>
+            </div>
             <div class="col-md-4"><strong>Cashier</strong><p class="mb-0"><?= e($sale['cashier_name'] ?: 'System User') ?></p></div>
         </div>
 

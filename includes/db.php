@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Buffer all output so redirect() works even after HTML starts
 $host = 'localhost';
 $user = 'root';
 $pass = '';
@@ -72,6 +73,9 @@ $conn->query("CREATE TABLE IF NOT EXISTS users (
 
 $conn->query("ALTER TABLE users MODIFY role ENUM('Administrator','Receptionist','Doctor','Inventory Officer','Pharmacy User') NOT NULL DEFAULT 'Administrator'");
 ensure_column($conn, 'users', 'status', "ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'");
+ensure_column($conn, 'users', 'avatar_path', 'VARCHAR(255) NULL DEFAULT NULL');
+ensure_column($conn, 'users', 'phone', 'VARCHAR(30) NULL DEFAULT NULL');
+ensure_column($conn, 'users', 'bio', 'TEXT NULL DEFAULT NULL');
 ensure_column($conn, 'patients', 'assigned_doctor_id', 'INT NULL');
 ensure_column($conn, 'appointments', 'doctor_id', 'INT NULL');
 ensure_column($conn, 'appointments', 'remarks', 'TEXT NULL');
@@ -485,7 +489,7 @@ if (
 }
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/hair-clinic-system');
+    define('BASE_URL', '/Hair-clinic-pro');
 }
 
 function e($value)

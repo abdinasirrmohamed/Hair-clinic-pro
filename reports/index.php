@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('reports');
 
@@ -123,9 +123,15 @@ $visible_report_cards = [
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title) ?></title>
+    <script>if(localStorage.getItem('hcp_theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}</script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/css/style.css" rel="stylesheet">`n    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>if(localStorage.getItem('hcp_theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/css/dark-role.css" rel="stylesheet">
 </head>
 <body class="dashboard-shell">
     <?php render_role_sidebar($_SERVER['SCRIPT_NAME'] ?? ''); ?>
@@ -137,6 +143,9 @@ $visible_report_cards = [
                 <input name="search" placeholder="Search reports, patients, records...">
             </form>
             <div class="top-actions admin-profile">
+                <button class="dark-toggle" id="darkToggle"  title="Toggle dark mode" type="button" style="border:0;background:transparent;color:var(--text-muted);font-size:1.35rem;cursor:pointer;">
+                    <i class="bi bi-moon-fill" id="darkIcon"></i>
+                </button>
                 <button type="button" aria-label="Notifications"><i class="bi bi-bell"></i></button>
                 <button type="button" aria-label="Help"><i class="bi bi-question-circle"></i></button>
                 <span class="profile-divider"></span>
@@ -171,6 +180,27 @@ $visible_report_cards = [
             </div>
 
             <div class="report-grid">
+                <?php if (can_view_report('finance')): ?>
+                <section class="report-table-card" style="grid-column: span 2;">
+                    <div class="report-section-head">
+                        <h2>Revenue & Expenses Overview</h2>
+                    </div>
+                    <div style="padding: 1rem; height: 300px; width: 100%;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </section>
+                <?php endif; ?>
+
+                <?php if (can_view_report('appointments')): ?>
+                <section class="report-table-card">
+                    <div class="report-section-head">
+                        <h2>Appointment Status Distribution</h2>
+                    </div>
+                    <div style="padding: 1rem; height: 300px; width: 100%;">
+                        <canvas id="appointmentsChart"></canvas>
+                    </div>
+                </section>
+                <?php endif; ?>
                 <?php if (can_view_report('appointments')): ?>
                 <section class="report-table-card">
                     <div class="report-section-head">
@@ -324,5 +354,134 @@ $visible_report_cards = [
         </main>
     </section>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data for Revenue Chart
+            const ctxRev = document.getElementById('revenueChart');
+            if (ctxRev) {
+                new Chart(ctxRev, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Patient Payments', 'Pharmacy Sales', 'Treatments', 'Expenses'],
+                        datasets: [{
+                            label: 'Amount (USD)',
+                            data: [<?= json_encode($patient_payment_revenue) ?>, <?= json_encode($report_pharmacy_revenue) ?>, <?= json_encode($income) ?>, <?= json_encode($report_expenses) ?>],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.6)',
+                                'rgba(75, 192, 192, 0.6)',
+                                'rgba(153, 102, 255, 0.6)',
+                                'rgba(255, 99, 132, 0.6)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+
+            // Data for Appointments Chart
+            const ctxAppt = document.getElementById('appointmentsChart');
+            if (ctxAppt) {
+                new Chart(ctxAppt, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Pending/Approved', 'Cancelled'],
+                        datasets: [{
+                            data: [
+                                <?= json_encode($completed_appointments) ?>, 
+                                <?= json_encode($appointments_count - $completed_appointments) ?>, 
+                                0 // Assuming cancelled aren't fetched in main query, simplified for demo
+                            ],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.7)',
+                                'rgba(255, 193, 7, 0.7)',
+                                'rgba(220, 53, 69, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        });
+    </script>
+<script>
+function toggleDark() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('hcp_theme', 'light');
+        document.getElementById('darkIcon').className = 'bi bi-moon-fill';
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('hcp_theme', 'dark');
+        document.getElementById('darkIcon').className = 'bi bi-sun-fill';
+    }
+}
+(function () {
+    if (localStorage.getItem('hcp_theme') === 'dark') {
+        var icon = document.getElementById('darkIcon');
+        if (icon) icon.className = 'bi bi-sun-fill';
+    }
+})();
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof IntersectionObserver !== 'undefined') {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.classList.add('animate-reveal');
+                    }, index * 80);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
+        
+        const elementsToAnimate = document.querySelectorAll('.stat-card, .table-wrap, .form-panel, .metric-card, .recent-panel, .appointments-panel, .dashboard-appointment-hub, .hub-appointment-card, .appointment-card, .patient-row');
+        elementsToAnimate.forEach(el => observer.observe(el));
+    }
+});
+</script>
+<script id="bulletproof-dark-toggle">
+document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('darkToggle');
+    if (btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            var icon = document.getElementById('darkIcon');
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('hcp_theme', 'light');
+                if (icon) icon.className = 'bi bi-moon-fill';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('hcp_theme', 'dark');
+                if (icon) icon.className = 'bi bi-sun-fill';
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>
+
+
+
+
+

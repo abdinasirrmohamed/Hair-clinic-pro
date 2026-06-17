@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $page_title = 'Inventory Items';
@@ -33,7 +33,7 @@ $categories = ['Medicines','Surgical Gloves','Syringes','Needles','Bandages','Me
     <a class="add-patient-btn" href="medicine_form.php"><i class="bi bi-plus-lg"></i>Add New Medicine</a>
 </div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a class="active" href="medicines.php">Inventory Items</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a class="active" href="medicines.php">Medicines</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
     <form class="appointment-list-toolbar m-4" method="get">
         <label class="appointment-search-box"><i class="bi bi-search"></i><input name="search" value="<?= e($search) ?>" placeholder="Search name, generic, batch, barcode, supplier..."></label>
         <select name="category"><option value="">All Categories</option><?php foreach ($categories as $cat): ?><option value="<?= e($cat) ?>" <?= $category === $cat ? 'selected' : '' ?>><?= e($cat) ?></option><?php endforeach; ?></select>
@@ -66,3 +66,4 @@ $categories = ['Medicines','Surgical Gloves','Syringes','Needles','Bandages','Me
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

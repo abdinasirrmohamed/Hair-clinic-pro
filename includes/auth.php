@@ -87,6 +87,13 @@ function require_patient_assignment($patient_id)
 function require_access($module)
 {
     require_login();
+
+    // Every logged-in user can access their own profile page regardless of role
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    if (str_ends_with($script, '/users/profile.php')) {
+        return;
+    }
+
     if (!can_access($module)) {
         http_response_code(403);
         require __DIR__ . '/../access-denied.php';
@@ -127,15 +134,43 @@ function role_menu_items()
     return array_values(array_filter($items, fn($item) => can_access($item['module'])));
 }
 
-function render_role_sidebar($current_path = '')
+function render_role_sidebar(string $current_path = ''): void
 {
-    echo '<aside class="clinic-sidebar"><div><a class="brand-mark" href="' . BASE_URL . '/dashboard.php"><span>Hair Clinic Pro</span><small>' . e(current_role()) . '</small></a><nav class="side-nav">';
+    $role     = current_role();
+    $role_key = strtolower(str_replace(' ', '_', $role));
+
+    $badge_labels = [
+        'administrator'    => 'Admin',
+        'doctor'           => 'Doctor',
+        'receptionist'     => 'Reception',
+        'inventory_officer'=> 'Inventory',
+        'pharmacy_user'    => 'Pharmacy',
+    ];
+    $badge_label = $badge_labels[$role_key] ?? $role;
+
+    echo '<aside class="clinic-sidebar">';
+    echo '<div>';
+    echo '<a class="brand-mark" href="' . BASE_URL . '/dashboard.php">';
+    echo '<span>Hair Clinic Pro</span>';
+    echo '<span class="role-sidebar-badge rbadge-' . e($role_key) . '">' . e($badge_label) . '</span>';
+    echo '</a>';
+    echo '<nav class="side-nav">';
+
     foreach (role_menu_items() as $item) {
-        $active = strpos($current_path, dirname($item['href'])) !== false || ($item['module'] === 'dashboard' && strpos($current_path, 'dashboard.php') !== false) ? 'active' : '';
-        echo '<a class="' . e($active) . '" href="' . BASE_URL . e($item['href']) . '"><i class="bi ' . e($item['icon']) . '"></i><span>' . e($item['label']) . '</span></a>';
+        $is_active = strpos($current_path, dirname($item['href'])) !== false
+            || ($item['module'] === 'dashboard' && strpos($current_path, 'dashboard.php') !== false);
+        $active = $is_active ? 'active' : '';
+        echo '<a class="' . e($active) . '" href="' . BASE_URL . e($item['href']) . '">';
+        echo '<i class="bi ' . e($item['icon']) . '"></i>';
+        echo '<span>' . e($item['label']) . '</span>';
+        echo '</a>';
     }
-    echo '</nav></div><div class="side-bottom">';
-    echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div></aside>';
+
+    echo '</nav></div>';
+    echo '<div class="side-bottom">';
+    echo '<a href="' . BASE_URL . '/users/profile.php"><i class="bi bi-person-circle"></i><span>My Profile</span></a>';
+    echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>';
+    echo '</div></aside>';
 }
 
 function require_login()

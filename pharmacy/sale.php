@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/waafi_payment.php';
 require_access('pharmacy');
 $page_title = 'Pharmacy POS Sale';
 require_once __DIR__ . '/../includes/header.php';
@@ -14,14 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = $customer_name !== '' ? $customer_name : null;
     $patient_id = (int) ($_POST['patient_id'] ?? 0);
     $patient_id = $patient_id > 0 ? $patient_id : null;
-    $method = $_POST['payment_method'] ?? 'Cash';
-    $discount_type = $_POST['discount_type'] ?? 'None';
+    $method         = $_POST['payment_method'] ?? 'Cash';
+    $discount_type  = $_POST['discount_type'] ?? 'None';
     $discount_value = max(0, (float) ($_POST['discount_value'] ?? 0));
-    $tax_percent = max(0, (float) ($_POST['tax_percent'] ?? 0));
-    $notes = trim($_POST['notes'] ?? '');
-    $medicine_ids = $_POST['medicine_id'] ?? [];
-    $quantities = $_POST['quantity'] ?? [];
-    $created_by = (int) ($_SESSION['admin_id'] ?? 0);
+    $tax_percent    = max(0, (float) ($_POST['tax_percent'] ?? 0));
+    $notes          = trim($_POST['notes'] ?? '');
+    $account_no     = trim($_POST['account_no'] ?? '');
+    $medicine_ids   = $_POST['medicine_id'] ?? [];
+    $quantities     = $_POST['quantity'] ?? [];
+    $created_by     = (int) ($_SESSION['admin_id'] ?? 0);
 
     if (!in_array($method, $payment_methods, true)) {
         $method = 'Cash';
@@ -71,11 +73,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taxable_total = max(0, $subtotal - $discount_amount);
         $tax_amount = $taxable_total * $tax_percent / 100;
         $total_amount = $taxable_total + $tax_amount;
-        $sale_number = 'SALE-' . date('Ymd') . '-' . random_int(1000, 9999);
-        $medicine_count = count($items);
+        $sale_number     = 'SALE-' . date('Ymd') . '-' . random_int(1000, 9999);
+        $medicine_count  = count($items);
         $prescription_id = null;
-        $payment_status = 'Paid';
-        $status = 'Paid';
+        $payment_status  = 'Paid';
+        $status          = 'Paid';
+        $waafi_tx_id     = '';
+
+        $mobile_methods = ['EVC Plus', 'Sahal'];
+        if (in_array($method, $mobile_methods, true)) {
+            if ($account_no === '') {
+                throw new Exception("$method payment requires a valid phone number.");
+            }
+            /** @var WaafiPayment $waafi */
+            $waafi  = new WaafiPayment();
+            $result = $waafi->charge($total_amount, $account_no, $sale_number, $sale_number, 'Pharmacy Sale');
+            if (!$result['success']) {
+                throw new Exception("$method payment failed: {$result['message']}");
+            }
+            $waafi_tx_id = $result['transaction_id'];
+            $notes       = trim(($notes !== '' ? $notes . ' | ' : '') . "WAAFI TX: $waafi_tx_id");
+        }
 
         $stmt = $conn->prepare('INSERT INTO pharmacy_sales (sale_number, customer_name, patient_id, prescription_id, medicine_count, subtotal, discount_type, discount_value, discount_amount, tax_percent, tax_amount, total_amount, payment_method, payment_status, status, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->bind_param('ssiiidsdddddssssi', $sale_number, $customer_name, $patient_id, $prescription_id, $medicine_count, $subtotal, $discount_type, $discount_value, $discount_amount, $tax_percent, $tax_amount, $total_amount, $method, $payment_status, $status, $notes, $created_by);
@@ -102,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->commit();
         log_activity('Processed pharmacy sale', 'Pharmacy', $sale_id);
         flash('success', 'Sale completed, stock updated, and receipt generated.');
-        redirect('/pharmacy/receipt.php?id=' . $sale_id);
+        redirect("/pharmacy/receipt.php?id=$sale_id");
     } catch (Throwable $e) {
         $conn->rollback();
         flash('danger', $e->getMessage());
@@ -118,26 +136,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <section class="patient-management-card">
     <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Medicines</a><a class="active" href="sale.php">New Sale</a><a href="prescriptions.php">Prescriptions</a><a href="sales_history.php">Sales History</a><a href="reports.php">Reports</a></div></div>
     <form method="post" id="posForm" class="p-4">
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
+        <div class="row g-3 mb-2">
+            <div class="col-md-3">
                 <label class="form-label">Customer Name <span class="text-muted">(optional)</span></label>
                 <input class="form-control" name="customer_name" placeholder="Walk-in customer">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Link Patient <span class="text-muted">(optional)</span></label>
-                <select class="form-select" name="patient_id">
-                    <option value="">No patient record</option>
+                <select class="form-select" name="patient_id" id="posPatientSelect">
+                    <option value="" data-phone="">No patient record</option>
                     <?php foreach ($patients as $patient): ?>
-                        <option value="<?= (int) $patient['id'] ?>"><?= e($patient['full_name']) ?> - <?= e($patient['phone']) ?></option>
+                        <option value="<?= (int) $patient['id'] ?>" data-phone="<?= e(preg_replace('/\D/', '', $patient['phone'])) ?>"><?= e($patient['full_name']) ?> - <?= e($patient['phone']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Payment Method</label>
-                <select class="form-select" name="payment_method">
-                    <?php foreach ($payment_methods as $method): ?><option><?= e($method) ?></option><?php endforeach; ?>
+                <select class="form-select" name="payment_method" id="posPaymentMethod" onchange="onMethodChange(this.value)">
+                    <?php foreach ($payment_methods as $m): ?><option><?= e($m) ?></option><?php endforeach; ?>
                 </select>
             </div>
+            <div class="col-md-3" id="phoneCol">
+                <label class="form-label" id="phoneLbl">EVC / Sahal Phone</label>
+                <div class="input-group">
+                    <input class="form-control" type="tel" name="account_no" id="posAccountNo"
+                           placeholder="e.g. 252618827482"
+                           oninput="onPhoneInput(this.value)">
+                    <button class="btn btn-outline-secondary" type="button"
+                            onclick="fillFromPatient()" title="Copy phone from linked patient">
+                        <i class="bi bi-person-fill"></i>
+                    </button>
+                </div>
+                <div class="form-text text-muted" id="phoneNote">Enter to auto-switch to EVC Plus.</div>
+            </div>
+        </div>
+
+        <div id="walletBanner" class="alert alert-success py-2 mb-3 d-flex align-items-center gap-2" style="display:none!important;">
+            <i class="bi bi-phone-fill fs-5"></i>
+            <span>
+                Charging <strong id="posAlertTotal">$0.00</strong> to
+                <strong id="posAlertPhone">—</strong> via
+                <strong id="posAlertMethod">—</strong>
+                &mdash; customer receives a payment prompt on their phone.
+            </span>
         </div>
 
         <div class="table-responsive">
@@ -165,10 +206,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-lg-5">
                 <div class="form-panel m-0">
                     <div class="row g-3">
-                        <div class="col-6"><label class="form-label">Discount Type</label><select class="form-select" name="discount_type" id="discountType"><option>None</option><option>Fixed</option><option>Percentage</option></select></div>
-                        <div class="col-6"><label class="form-label">Discount</label><input class="form-control" type="number" step="0.01" min="0" name="discount_value" id="discountValue" value="0"></div>
+                        <div class="col-6"><label class="form-label">Discount Type</label><select class="form-select" name="discount_type" id="discountType"><option value="None">No Discount</option><option value="Fixed">Fixed Amount ($)</option><option value="Percentage">Percentage (%)</option></select></div>
+                        <div class="col-6"><label class="form-label" id="discountLbl">Discount</label><input class="form-control" type="number" step="0.01" min="0" name="discount_value" id="discountValue" value="0" placeholder="0"></div>
                         <div class="col-6"><label class="form-label">Tax %</label><input class="form-control" type="number" step="0.01" min="0" name="tax_percent" id="taxPercent" value="0"></div>
-                        <div class="col-6 d-flex align-items-end justify-content-end"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-check2-circle"></i> Confirm Payment</button></div>
+                        <div class="col-6 d-flex align-items-end justify-content-end"><button class="btn btn-primary w-100" type="submit" id="posSubmitBtn"><i class="bi bi-check2-circle"></i> <span id="posSubmitLabel">Confirm Payment</span></button></div>
                     </div>
                     <hr>
                     <div class="invoice-total-line"><span>Subtotal</span><strong id="subtotalText">$0.00</strong></div>
@@ -273,12 +314,22 @@ function updateTotals() {
     document.getElementById('discountText').textContent = money(discount);
     document.getElementById('taxText').textContent = money(tax);
     document.getElementById('totalText').textContent = money(taxable + tax);
+    if (typeof refreshBanner === 'function') refreshBanner();
 }
 
 document.getElementById('addMedicine').addEventListener('click', addRow);
-document.getElementById('discountType').addEventListener('change', updateTotals);
-document.getElementById('discountValue').addEventListener('input', updateTotals);
-document.getElementById('taxPercent').addEventListener('input', updateTotals);
+
+document.getElementById('discountType').addEventListener('change', function () {
+    var lbl = document.getElementById('discountLbl');
+    if (this.value === 'Percentage') lbl.textContent = 'Discount (%)';
+    else if (this.value === 'Fixed')  lbl.textContent = 'Discount ($)';
+    else                              lbl.textContent = 'Discount';
+    updateTotals();
+});
+document.getElementById('discountValue').addEventListener('input',  updateTotals);
+document.getElementById('discountValue').addEventListener('change', updateTotals);
+document.getElementById('taxPercent').addEventListener('input',  updateTotals);
+document.getElementById('taxPercent').addEventListener('change', updateTotals);
 rows.addEventListener('input', event => {
     if (event.target.classList.contains('quantity-input')) updateRow(event.target.closest('tr'));
 });
@@ -290,5 +341,99 @@ rows.addEventListener('click', event => {
     }
 });
 addRow();
+
+// ── Mobile wallet ──────────────────────────────────────────────────────────
+function isMobileMethod() {
+    return ['EVC Plus','Sahal'].indexOf(document.getElementById('posPaymentMethod').value) !== -1;
+}
+
+function onMethodChange(val) {
+    var mobile = ['EVC Plus','Sahal'].indexOf(val) !== -1;
+    var phoneLbl  = document.getElementById('phoneLbl');
+    var submitLbl = document.getElementById('posSubmitLabel');
+    var submitBtn = document.getElementById('posSubmitBtn');
+    var phoneNote = document.getElementById('phoneNote');
+    document.getElementById('posAccountNo').required = mobile;
+    if (mobile) {
+        phoneLbl.innerHTML  = '<strong class="text-primary"><i class="bi bi-phone-fill"></i> ' + val + ' Phone <span class="text-danger">*</span></strong>';
+        phoneNote.innerHTML = 'Enter number or <strong>tap <i class="bi bi-person-fill"></i></strong> to copy from patient.';
+        submitLbl.textContent = 'Send Payment Request';
+        submitBtn.classList.remove('btn-primary');
+        submitBtn.classList.add('btn-success');
+    } else {
+        phoneLbl.innerHTML  = 'Phone <small class="text-muted">(EVC/Sahal only)</small>';
+        phoneNote.textContent = 'Required for EVC Plus / Sahal.';
+        submitLbl.textContent = 'Confirm Payment';
+        submitBtn.classList.remove('btn-success');
+        submitBtn.classList.add('btn-primary');
+        document.getElementById('walletBanner').style.setProperty('display', 'none', 'important');
+    }
+    refreshBanner();
+}
+
+function refreshBanner() {
+    var phone   = document.getElementById('posAccountNo').value.trim();
+    var total   = document.getElementById('totalText').textContent;
+    var method  = document.getElementById('posPaymentMethod').value;
+    var banner  = document.getElementById('walletBanner');
+    var mobile  = isMobileMethod();
+    document.getElementById('posAlertTotal').textContent  = total;
+    document.getElementById('posAlertPhone').textContent  = phone || '—';
+    document.getElementById('posAlertMethod').textContent = method;
+    banner.style.setProperty('display', (mobile && phone && total !== '$0.00') ? 'flex' : 'none', 'important');
+}
+
+function onPhoneInput(val) {
+    // Auto-switch payment method to EVC Plus as soon as a phone is typed
+    if (val.trim().length > 0) {
+        var sel = document.getElementById('posPaymentMethod');
+        if (!isMobileMethod()) {
+            sel.value = 'EVC Plus';
+            onMethodChange('EVC Plus');
+        }
+    }
+    refreshBanner();
+}
+
+function fillFromPatient() {
+    var sel   = document.getElementById('posPatientSelect');
+    var phone = sel.options[sel.selectedIndex].dataset.phone || '';
+    if (phone) {
+        document.getElementById('posAccountNo').value = phone;
+        onPhoneInput(phone);
+    } else {
+        alert('Select a linked patient first, or type the phone number manually.');
+    }
+}
+
+// phone input is handled by oninput="onPhoneInput()" on the element
+
+document.getElementById('posForm').addEventListener('submit', function (e) {
+    var phone  = document.getElementById('posAccountNo').value.trim();
+    var method = document.getElementById('posPaymentMethod').value;
+
+    // If a phone number is present but method is not mobile, force EVC Plus
+    if (phone.length > 0 && !isMobileMethod()) {
+        document.getElementById('posPaymentMethod').value = 'EVC Plus';
+        onMethodChange('EVC Plus');
+    }
+
+    // Require phone if mobile method selected
+    if (isMobileMethod() && phone === '') {
+        e.preventDefault();
+        alert('Please enter the customer\'s EVC Plus / Sahal phone number before submitting.');
+        document.getElementById('posAccountNo').focus();
+        return false;
+    }
+
+    if (isMobileMethod()) {
+        var btn = document.getElementById('posSubmitBtn');
+        btn.disabled  = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending Payment Request…';
+    }
+});
+
+// initialise on load (in case browser restores a previous selection)
+onMethodChange(document.getElementById('posPaymentMethod').value);
 </script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

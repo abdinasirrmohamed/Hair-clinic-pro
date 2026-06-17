@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('appointments');
 $page_title = 'Appointments';
@@ -123,7 +123,7 @@ function appointment_query(array $overrides = [])
             <h2>Appointment Worklist</h2>
             <p><?= number_format(count($appointments)) ?> records showing</p>
         </div>
-        <a href="add.php"><i class="bi bi-calendar-plus"></i> Book New</a>
+        <div class="d-flex gap-2"><a href="reminders.php" class="btn btn-outline-primary btn-sm"><i class="bi bi-envelope"></i> Reminders</a><a href="add.php" class="btn btn-primary btn-sm"><i class="bi bi-calendar-plus"></i> Book New</a></div>
     </div>
 
     <form class="appointment-list-toolbar" method="get">
@@ -157,9 +157,9 @@ function appointment_query(array $overrides = [])
                         <div>
                             <h3><?= e($appointment['patient_name']) ?></h3>
                             <p><?= e($appointment['reason']) ?></p>
-                            <small><i class="bi bi-calendar3"></i><?= e(date('M j, Y', strtotime($appointment['appointment_date']))) ?> · <?= e($appointment['doctor_name'] ?: 'No doctor assigned') ?></small>
+                            <small><i class="bi bi-calendar3"></i><?= e(date('M j, Y', strtotime($appointment['appointment_date']))) ?> Â· <?= e($appointment['doctor_name'] ?: 'No doctor assigned') ?></small>
                         </div>
-                        <em class="status-pill <?= e(appointment_badge_class($appointment['status'])) ?>"><?= e($appointment['status']) ?></em>
+                        <div class="text-end"><em class="status-pill <?= e(appointment_badge_class($appointment['status'])) ?> mb-1 d-block"><?= e($appointment['status']) ?></em><?php if ($appointment['reminder_sent']): ?><span class="badge bg-success" style="font-size:0.65rem;"><i class="bi bi-check-circle"></i> Reminded</span><?php endif; ?></div>
                     </div>
                 </a>
             <?php endforeach; ?>
@@ -200,3 +200,4 @@ function appointment_query(array $overrides = [])
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

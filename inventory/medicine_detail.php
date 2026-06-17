@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $id = (int) ($_GET['id'] ?? 0);
@@ -44,3 +44,4 @@ require_once __DIR__ . '/../includes/header.php';
     </section></div>
 </div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

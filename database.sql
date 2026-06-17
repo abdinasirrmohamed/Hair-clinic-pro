@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS hair_clinic_system;
+﻿CREATE DATABASE IF NOT EXISTS hair_clinic_system;
 USE hair_clinic_system;
 
 -- For a full demo dataset after importing this schema, run:
@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS appointments (
     appointment_time TIME NOT NULL,
     reason VARCHAR(255) NOT NULL,
     status ENUM('Pending','Approved','Rejected','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
+    reminder_sent TINYINT(1) NOT NULL DEFAULT 0,
     notes TEXT,
     remarks TEXT,
     approved_at DATETIME NULL,
@@ -93,7 +94,16 @@ CREATE TABLE IF NOT EXISTS treatments (
     patient_id INT NOT NULL,
     treatment_name VARCHAR(150) NOT NULL,
     treatment_date DATE NOT NULL,
+    treatment_stage ENUM('Pre-Treatment Evaluation', 'Surgery', 'Post-Treatment Review') NOT NULL DEFAULT 'Surgery',
     progress ENUM('Started', 'In Progress', 'Completed') NOT NULL DEFAULT 'Started',
+    cost DECIMAL(10,2) NOT NULL DEFAULT 0,
+    grafts_planned INT NULL,
+    grafts_extracted INT NULL,
+    grafts_implanted INT NULL,
+    donor_area_status VARCHAR(255) NULL,
+    recipient_area_status VARCHAR(255) NULL,
+    pre_op_photo VARCHAR(255) NULL,
+    post_op_photo VARCHAR(255) NULL,
     cost DECIMAL(10,2) NOT NULL DEFAULT 0,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -544,3 +554,4 @@ shipping_cost = VALUES(shipping_cost),
 total_estimate = VALUES(total_estimate),
 order_status = VALUES(order_status),
 note = VALUES(note);
+

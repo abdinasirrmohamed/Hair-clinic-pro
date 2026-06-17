@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $report = $_GET['report'] ?? 'inventory';
@@ -68,7 +68,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="d-flex gap-2"><a class="add-patient-btn" href="?<?= e(http_build_query(array_merge($_GET, ['export' => 'excel']))) ?>"><i class="bi bi-file-earmark-spreadsheet"></i>Excel</a><button class="add-patient-btn" onclick="window.print()"><i class="bi bi-printer"></i>PDF / Print</button></div>
 </div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Inventory Items</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a class="active" href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a href="medicines.php">Medicines</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a class="active" href="reports.php">Reports</a></div></div>
     <form class="appointment-list-toolbar m-4" method="get">
         <select name="report"><?php foreach ($reports as $key => $label): ?><option value="<?= e($key) ?>" <?= $report === $key ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?></select>
         <input type="date" name="from" value="<?= e($from) ?>"><input type="date" name="to" value="<?= e($to) ?>">
@@ -101,3 +101,4 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $medicines = $conn->query('SELECT * FROM medicines ORDER BY medicine_name')->fetch_all(MYSQLI_ASSOC);
@@ -34,7 +34,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="patient-head"><div><h1>Stock Out Management</h1><p>Record manual stock issues, treatment usage, and other stock deductions.</p></div></div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Inventory Items</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a class="active" href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a href="medicines.php">Medicines</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a class="active" href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
     <div class="row g-4 p-4">
         <div class="col-lg-5"><form class="form-panel m-0" method="post">
             <div class="row g-3">
@@ -50,3 +50,4 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

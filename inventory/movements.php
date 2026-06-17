@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_access('inventory');
 $type = $_GET['type'] ?? '';
@@ -27,7 +27,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="patient-head"><div><h1>Inventory Movement History</h1><p>Track all stock in, stock out, pharmacy sales, treatment consumption, and adjustments.</p></div></div>
 <section class="patient-management-card">
-    <div class="patient-tabs"><div class="tab-links"><a href="medicines.php">Inventory Items</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a class="active" href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
+    <div class="patient-tabs"><div class="tab-links"><a href="items.php">General Items</a><a href="medicines.php">Medicines</a><a href="purchase.php">Purchase</a><a href="stock_in.php">Stock In</a><a href="stock_out.php">Stock Out</a><a href="suppliers.php">Suppliers</a><a class="active" href="movements.php">Movements</a><a href="reports.php">Reports</a></div></div>
     <form class="appointment-list-toolbar m-4" method="get">
         <label class="appointment-search-box"><i class="bi bi-search"></i><input name="search" value="<?= e($search) ?>" placeholder="Search item, transaction, department, purpose..."></label>
         <select name="type"><option value="">All Types</option><?php foreach (['Stock In','Stock Out','Pharmacy Sales','Treatment Consumption','Inventory Adjustment'] as $movement_type): ?><option value="<?= e($movement_type) ?>" <?= $type === $movement_type ? 'selected' : '' ?>><?= e($movement_type) ?></option><?php endforeach; ?></select>
@@ -55,3 +55,4 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </section>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+

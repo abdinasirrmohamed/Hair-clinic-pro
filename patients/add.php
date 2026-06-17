@@ -1,9 +1,8 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_roles(['Administrator', 'Receptionist']);
-$page_title = 'Add Patient';
-require_once __DIR__ . '/../includes/header.php';
 
+// ── Handle POST before header outputs any HTML ────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $conn->prepare('INSERT INTO patients (full_name, phone, email, gender, date_of_birth, address, medical_notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
     $dob = $_POST['date_of_birth'] ?: null;
@@ -13,6 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash('success', 'Patient added successfully.');
     redirect('/patients/view.php');
 }
+
+$page_title = 'Add Patient';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="page-head"><h1 class="h3 mb-0">Add Patient</h1></div>
 <form class="form-panel" method="post">
