@@ -1,0 +1,520 @@
+// Hair Clinic Pro - Database Schema Definition
+// This Prisma schema is used for schema documentation and migrations only.
+// Data access is handled by Laravel Eloquent ORM.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// USERS & AUTHENTICATION
+// ──────────────────────────────────────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  fullName  String   @map("full_name") @db.VarChar(150)
+  role      String   @default("Administrator") @db.VarChar(50)
+  status    String   @default("Active") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  doctor             Doctor?
+  reports            Report[]
+  payments           Payment[]          @relation("PaymentCreator")
+  expenses           Expense[]
+  auditLogs          AuditLog[]
+  inventoryMovements InventoryMovement[]
+  pharmacyInvoices   PharmacyInvoice[]
+  pharmacySales      PharmacySale[]
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────────
+// DOCTORS & SCHEDULING
+// ──────────────────────────────────────────────
+
+model Doctor {
+  id                   Int      @id @default(autoincrement())
+  userId               Int?     @unique @map("user_id")
+  fullName             String   @map("full_name") @db.VarChar(150)
+  specialization       String   @db.VarChar(120)
+  qualification        String?  @db.VarChar(180)
+  phone                String   @db.VarChar(30)
+  email                String?  @db.VarChar(150)
+  licenseNumber        String   @unique @map("license_number") @db.VarChar(80)
+  photo                String?  @db.VarChar(255)
+  experienceYears      Int      @default(0) @map("experience_years")
+  availabilitySchedule String?  @map("availability_schedule") @db.Text
+  bio                  String?  @db.Text
+  status               String   @default("Active") @db.VarChar(20)
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  schedules    DoctorSchedule[]
+  blockedDates DoctorBlockedDate[]
+  appointments Appointment[]
+  prescriptions Prescription[]
+
+  @@map("doctors")
+}
+
+model DoctorSchedule {
+  id          Int      @id @default(autoincrement())
+  doctorId    Int      @map("doctor_id")
+  dayOfWeek   String   @map("day_of_week") @db.VarChar(20)
+  startTime   DateTime @default(dbgenerated("'08:00:00'")) @map("start_time") @db.Time(0)
+  endTime     DateTime @default(dbgenerated("'16:00:00'")) @map("end_time") @db.Time(0)
+  slotMinutes Int      @default(30) @map("slot_minutes")
+  isWorking   Boolean  @default(true) @map("is_working")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek], name: "unique_doctor_day")
+  @@map("doctor_schedules")
+}
+
+model DoctorBlockedDate {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int      @map("doctor_id")
+  blockDate DateTime @map("block_date") @db.Date
+  blockType String   @default("Blocked") @map("block_type") @db.VarChar(20)
+  reason    String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, blockDate], name: "unique_doctor_block_date")
+  @@map("doctor_blocked_dates")
+}
+
+// ──────────────────────────────────────────────
+// PATIENTS & APPOINTMENTS
+// ──────────────────────────────────────────────
+
+model Patient {
+  id               Int      @id @default(autoincrement())
+  fullName         String   @map("full_name") @db.VarChar(150)
+  phone            String   @db.VarChar(30)
+  email            String?  @db.VarChar(150)
+  gender           String   @db.VarChar(10)
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  address          String?  @db.VarChar(255)
+  medicalNotes     String?  @map("medical_notes") @db.Text
+  assignedDoctorId Int?     @map("assigned_doctor_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  appointments     Appointment[]
+  treatments       Treatment[]
+  followups        Followup[]
+  payments         Payment[]
+  prescriptions    Prescription[]
+  pharmacySales    PharmacySale[]
+  pharmacyInvoices PharmacyInvoice[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id              Int       @id @default(autoincrement())
+  patientId       Int       @map("patient_id")
+  doctorId        Int?      @map("doctor_id")
+  appointmentDate DateTime  @map("appointment_date") @db.Date
+  appointmentTime DateTime  @map("appointment_time") @db.Time(0)
+  reason          String    @db.VarChar(255)
+  status          String    @default("Pending") @db.VarChar(20)
+  reminderSent    Boolean   @default(false) @map("reminder_sent")
+  notes           String?   @db.Text
+  remarks         String?   @db.Text
+  approvedAt      DateTime? @map("approved_at")
+  rejectedAt      DateTime? @map("rejected_at")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  patient  Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor   Doctor?   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  payments Payment[]
+
+  @@map("appointments")
+}
+
+// ──────────────────────────────────────────────
+// TREATMENTS & FOLLOWUPS
+// ──────────────────────────────────────────────
+
+model Treatment {
+  id                   Int      @id @default(autoincrement())
+  patientId            Int      @map("patient_id")
+  treatmentName        String   @map("treatment_name") @db.VarChar(150)
+  treatmentDate        DateTime @map("treatment_date") @db.Date
+  treatmentStage       String   @default("Surgery") @map("treatment_stage") @db.VarChar(50)
+  progress             String   @default("Started") @db.VarChar(20)
+  cost                 Decimal  @default(0) @db.Decimal(10, 2)
+  graftsPlanned        Int?     @map("grafts_planned")
+  graftsExtracted      Int?     @map("grafts_extracted")
+  graftsImplanted      Int?     @map("grafts_implanted")
+  donorAreaStatus      String?  @map("donor_area_status") @db.VarChar(255)
+  recipientAreaStatus  String?  @map("recipient_area_status") @db.VarChar(255)
+  preOpPhoto           String?  @map("pre_op_photo") @db.VarChar(255)
+  postOpPhoto          String?  @map("post_op_photo") @db.VarChar(255)
+  notes                String?  @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  patient  Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  followups Followup[]
+
+  @@map("treatments")
+}
+
+model Followup {
+  id           Int      @id @default(autoincrement())
+  patientId    Int      @map("patient_id")
+  treatmentId  Int?     @map("treatment_id")
+  followupDate DateTime @map("followup_date") @db.Date
+  result       String?  @db.Text
+  status       String   @default("Scheduled") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  patient   Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  treatment Treatment? @relation(fields: [treatmentId], references: [id], onDelete: SetNull)
+
+  @@map("followups")
+}
+
+// ──────────────────────────────────────────────
+// INVENTORY
+// ──────────────────────────────────────────────
+
+model InventoryItem {
+  id         Int      @id @default(autoincrement())
+  itemName   String   @map("item_name") @db.VarChar(150)
+  category   String   @db.VarChar(80)
+  stockLevel Int      @default(0) @map("stock_level")
+  unitPrice  Decimal  @default(0) @map("unit_price") @db.Decimal(10, 2)
+  vendor     String   @db.VarChar(150)
+  status     String   @default("In Stock") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  orders InventoryOrder[]
+
+  @@map("inventory_items")
+}
+
+model InventoryOrder {
+  id            Int      @id @default(autoincrement())
+  itemId        Int      @map("item_id")
+  orderCode     String   @unique @map("order_code") @db.VarChar(30)
+  quantity      Int
+  priority      String   @default("Normal") @db.VarChar(40)
+  shippingCost  Decimal  @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  totalEstimate Decimal  @default(0) @map("total_estimate") @db.Decimal(10, 2)
+  orderStatus   String   @default("Pending") @map("order_status") @db.VarChar(20)
+  note          String?  @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_orders")
+}
+
+// ──────────────────────────────────────────────
+// MEDICINES & SUPPLIERS
+// ──────────────────────────────────────────────
+
+model Medicine {
+  id                Int      @id @default(autoincrement())
+  medicineName      String   @map("medicine_name") @db.VarChar(150)
+  genericName       String?  @map("generic_name") @db.VarChar(150)
+  category          String   @db.VarChar(100)
+  batchNumber       String?  @map("batch_number") @db.VarChar(100)
+  barcode           String?  @db.VarChar(100)
+  quantity          Int      @default(0)
+  unitPrice         Decimal  @default(0) @map("unit_price") @db.Decimal(10, 2)
+  supplierId        Int?     @map("supplier_id")
+  expiryDate        DateTime @map("expiry_date") @db.Date
+  manufacturingDate DateTime? @map("manufacturing_date") @db.Date
+  reorderLevel      Int      @default(10) @map("reorder_level")
+  supplier          String   @db.VarChar(150)
+  description       String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  movements            InventoryMovement[]
+  prescriptionMedicines PrescriptionMedicine[]
+  pharmacySaleMedicines PharmacySaleMedicine[]
+  pharmacyInvoiceItems  PharmacyInvoiceItem[]
+
+  @@map("medicines")
+}
+
+model Supplier {
+  id            Int      @id @default(autoincrement())
+  companyName   String   @unique @map("company_name") @db.VarChar(150)
+  contactPerson String?  @map("contact_person") @db.VarChar(150)
+  phone         String   @db.VarChar(40)
+  email         String?  @db.VarChar(150)
+  address       String?  @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  movements InventoryMovement[]
+
+  @@map("suppliers")
+}
+
+model InventoryMovement {
+  id                Int      @id @default(autoincrement())
+  transactionNumber String   @map("transaction_number") @db.VarChar(50)
+  medicineId        Int      @map("medicine_id")
+  movementType      String   @map("movement_type") @db.VarChar(50)
+  quantity          Int
+  unitCost          Decimal  @default(0) @map("unit_cost") @db.Decimal(10, 2)
+  totalCost         Decimal  @default(0) @map("total_cost") @db.Decimal(10, 2)
+  supplierId        Int?     @map("supplier_id")
+  department        String?  @db.VarChar(120)
+  purpose           String?  @db.VarChar(255)
+  referenceType     String?  @map("reference_type") @db.VarChar(80)
+  referenceId       Int?     @map("reference_id")
+  invoicePath       String?  @map("invoice_path") @db.VarChar(255)
+  issuedBy          Int?     @map("issued_by")
+  movementDate      DateTime @default(now()) @map("movement_date")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  medicine Medicine  @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [issuedBy], references: [id], onDelete: SetNull)
+
+  @@index([movementDate], name: "movement_date_idx")
+  @@index([movementType], name: "movement_type_idx")
+  @@map("inventory_movements")
+}
+
+// ──────────────────────────────────────────────
+// PAYMENTS & FINANCE
+// ──────────────────────────────────────────────
+
+model Payment {
+  id              Int      @id @default(autoincrement())
+  patientId       Int      @map("patient_id")
+  appointmentId   Int?     @map("appointment_id")
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentMethod   String   @map("payment_method") @db.VarChar(30)
+  paymentStatus   String   @default("Paid") @map("payment_status") @db.VarChar(20)
+  referenceNumber String?  @map("reference_number") @db.VarChar(100)
+  notes           String?  @db.Text
+  createdBy       Int?     @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  creator     User?        @relation("PaymentCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  receipt     Receipt?
+
+  @@map("payments")
+}
+
+model Receipt {
+  id            Int      @id @default(autoincrement())
+  paymentId     Int      @unique @map("payment_id")
+  receiptNumber String   @unique @map("receipt_number") @db.VarChar(40)
+  clinicName    String   @default("Hair Clinic Pro") @map("clinic_name") @db.VarChar(150)
+  clinicPhone   String   @default("+252 61 000 0000") @map("clinic_phone") @db.VarChar(40)
+  clinicAddress String   @default("Mogadishu, Somalia") @map("clinic_address") @db.VarChar(255)
+  issuedAt      DateTime @default(now()) @map("issued_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  category    String   @db.VarChar(50)
+  expenseDate DateTime @map("expense_date") @db.Date
+  amount      Decimal  @db.Decimal(10, 2)
+  vendor      String?  @db.VarChar(150)
+  description String?  @db.Text
+  receiptPath String?  @map("receipt_path") @db.VarChar(255)
+  createdBy   Int?     @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([expenseDate], name: "expense_date_idx")
+  @@map("expenses")
+}
+
+model Report {
+  id          Int      @id @default(autoincrement())
+  reportType  String   @map("report_type") @db.VarChar(80)
+  periodType  String   @default("Daily") @map("period_type") @db.VarChar(20)
+  title       String   @db.VarChar(180)
+  generatedBy Int?     @map("generated_by")
+  dateFrom    DateTime @map("date_from") @db.Date
+  dateTo      DateTime @map("date_to") @db.Date
+  summary     String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [generatedBy], references: [id], onDelete: SetNull)
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  userName   String   @map("user_name") @db.VarChar(150)
+  userRole   String   @map("user_role") @db.VarChar(80)
+  action     String   @db.VarChar(150)
+  moduleName String   @map("module_name") @db.VarChar(80)
+  recordId   String?  @map("record_id") @db.VarChar(80)
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt], name: "audit_created_at_idx")
+  @@index([moduleName], name: "audit_module_idx")
+  @@map("audit_logs")
+}
+
+// ──────────────────────────────────────────────
+// PHARMACY
+// ──────────────────────────────────────────────
+
+model PharmacyInvoice {
+  id             Int      @id @default(autoincrement())
+  invoiceNumber  String   @unique @map("invoice_number") @db.VarChar(40)
+  patientId      Int      @map("patient_id")
+  totalAmount    Decimal  @default(0) @map("total_amount") @db.Decimal(10, 2)
+  paymentMethod  String   @map("payment_method") @db.VarChar(30)
+  paymentStatus  String   @default("Paid") @map("payment_status") @db.VarChar(20)
+  notes          String?  @db.Text
+  createdBy      Int?     @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  patient  Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  creator  User?                 @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  items    PharmacyInvoiceItem[]
+  payments PharmacyPayment[]
+
+  @@map("pharmacy_invoices")
+}
+
+model PharmacyInvoiceItem {
+  id        Int     @id @default(autoincrement())
+  invoiceId Int     @map("invoice_id")
+  medicineId Int    @map("medicine_id")
+  quantity  Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  lineTotal Decimal @map("line_total") @db.Decimal(10, 2)
+
+  invoice  PharmacyInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  medicine Medicine        @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  @@map("pharmacy_invoice_items")
+}
+
+model PharmacyPayment {
+  id              Int      @id @default(autoincrement())
+  invoiceId       Int      @map("invoice_id")
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentMethod   String   @map("payment_method") @db.VarChar(30)
+  referenceNumber String?  @map("reference_number") @db.VarChar(100)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  invoice PharmacyInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("pharmacy_payments")
+}
+
+// ──────────────────────────────────────────────
+// PRESCRIPTIONS
+// ──────────────────────────────────────────────
+
+model Prescription {
+  id                 Int      @id @default(autoincrement())
+  prescriptionNumber String   @unique @map("prescription_number") @db.VarChar(40)
+  patientId          Int      @map("patient_id")
+  doctorId           Int      @map("doctor_id")
+  prescriptionDate   DateTime @map("prescription_date") @db.Date
+  status             String   @default("Pending") @db.VarChar(20)
+  instructions       String?  @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  patient   Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor    Doctor                 @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  medicines PrescriptionMedicine[]
+  sales     PharmacySale[]
+
+  @@map("prescriptions")
+}
+
+model PrescriptionMedicine {
+  id             Int     @id @default(autoincrement())
+  prescriptionId Int     @map("prescription_id")
+  medicineId     Int     @map("medicine_id")
+  quantity       Int
+  instructions   String? @db.VarChar(255)
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicine     Medicine     @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  @@map("prescription_medicines")
+}
+
+// ──────────────────────────────────────────────
+// PHARMACY SALES
+// ──────────────────────────────────────────────
+
+model PharmacySale {
+  id              Int       @id @default(autoincrement())
+  saleNumber      String    @unique @map("sale_number") @db.VarChar(40)
+  customerName    String?   @map("customer_name") @db.VarChar(150)
+  patientId       Int?      @map("patient_id")
+  prescriptionId  Int?      @map("prescription_id")
+  medicineCount   Int       @default(0) @map("medicine_count")
+  subtotal        Decimal   @default(0) @db.Decimal(10, 2)
+  discountType    String    @default("None") @map("discount_type") @db.VarChar(20)
+  discountValue   Decimal   @default(0) @map("discount_value") @db.Decimal(10, 2)
+  discountAmount  Decimal   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  taxPercent      Decimal   @default(0) @map("tax_percent") @db.Decimal(10, 2)
+  taxAmount       Decimal   @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal   @default(0) @map("total_amount") @db.Decimal(10, 2)
+  paymentMethod   String    @map("payment_method") @db.VarChar(30)
+  paymentStatus   String    @default("Paid") @map("payment_status") @db.VarChar(20)
+  status          String    @default("Paid") @db.VarChar(20)
+  returnedAt      DateTime? @map("returned_at")
+  returnReason    String?   @map("return_reason") @db.Text
+  notes           String?   @db.Text
+  createdBy       Int?      @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  patient      Patient?              @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  prescription Prescription?         @relation(fields: [prescriptionId], references: [id], onDelete: SetNull)
+  creator      User?                 @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  medicines    PharmacySaleMedicine[]
+
+  @@map("pharmacy_sales")
+}
+
+model PharmacySaleMedicine {
+  id         Int     @id @default(autoincrement())
+  saleId     Int     @map("sale_id")
+  medicineId Int     @map("medicine_id")
+  quantity   Int
+  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
+  subtotal   Decimal @db.Decimal(10, 2)
+
+  sale     PharmacySale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  medicine Medicine     @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  @@map("pharmacy_sale_medicines")
+}

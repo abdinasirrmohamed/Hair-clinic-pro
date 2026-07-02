@@ -1,0 +1,104 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Patient;
+use App\Services\AuditLogService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+class PatientController extends Controller
+{
+    private function scopeForDoctor($query)
+    {
+        if (auth()->check() && auth()->user()->role === 'Doctor') {
+            $query->where('assigned_doctor_id', auth()->id());
+        }
+        return $query;
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $query = Patient::query();
+        $query = $this->scopeForDoctor($query);
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        return response()->json($query->paginate(15));
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'full_name' => 'required|string',
+            'phone' => 'required|string',
+            'gender' => ['required', Rule::in(['Male', 'Female', 'Other'])],
+            'email' => 'nullable|email',
+            'date_of_birth' => 'nullable|date',
+            'address' => 'nullable|string',
+            'medical_notes' => 'nullable|string',
+            'assigned_doctor_id' => 'nullable|exists:doctors,id'
+        ]);
+
+        if (auth()->user()->role === 'Doctor') {
+            $validated['assigned_doctor_id'] = auth()->id();
+        }
+
+        $patient = Patient::create($validated);
+        AuditLogService::log('Created patient', 'Patients', $patient->id);
+
+        return response()->json($patient, 201);
+    }
+
+    public function show(Patient $patient): JsonResponse
+    {
+        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $patient->load(['appointments.doctor', 'treatments', 'followups', 'payments', 'prescriptions']);
+        return response()->json($patient);
+    }
+
+    public function update(Request $request, Patient $patient): JsonResponse
+    {
+        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'full_name' => 'string',
+            'phone' => 'string',
+            'gender' => [Rule::in(['Male', 'Female', 'Other'])],
+            'email' => 'nullable|email',
+            'date_of_birth' => 'nullable|date',
+            'address' => 'nullable|string',
+            'medical_notes' => 'nullable|string',
+            'assigned_doctor_id' => 'nullable|exists:doctors,id'
+        ]);
+
+        $patient->update($validated);
+        AuditLogService::log('Updated patient', 'Patients', $patient->id);
+
+        return response()->json($patient);
+    }
+
+    public function destroy(Patient $patient): JsonResponse
+    {
+        if (auth()->user()->role === 'Doctor') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $patient->delete();
+        AuditLogService::log('Deleted patient', 'Patients', $patient->id);
+        return response()->json(null, 204);
+    }
+}
