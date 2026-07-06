@@ -9,17 +9,26 @@ class WaafiPaymentService
     private string $merchantUid;
     private string $apiUserId;
     private string $apiKey;
-    private string $endpoint = 'https://api.waafipay.net/asm';
+    private string $endpoint;
 
     public function __construct()
     {
         $this->merchantUid = config('services.waafi.merchant_uid', env('WAAFI_MERCHANT_UID'));
         $this->apiUserId = config('services.waafi.api_user_id', env('WAAFI_API_USER_ID'));
         $this->apiKey = config('services.waafi.api_key', env('WAAFI_API_KEY'));
+        $this->endpoint = config('services.waafi.endpoint', 'https://api.waafipay.net/asm');
     }
 
     public function charge(float $amount, string $accountNo, string $referenceId, string $invoiceId, string $description = 'Payment'): array
     {
+        if (!$this->merchantUid || !$this->apiUserId || !$this->apiKey) {
+            return [
+                'success' => false,
+                'transaction_id' => '',
+                'message' => 'WaafiPay is not configured. Add its credentials to the backend environment.',
+            ];
+        }
+
         // Format phone number
         $accountNo = preg_replace('/\D/', '', $accountNo);
         if (strlen($accountNo) === 9) {

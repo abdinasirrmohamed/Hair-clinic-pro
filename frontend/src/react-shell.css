@@ -1,0 +1,173 @@
+.react-state {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f3f7fb;
+  color: #172033;
+  font: 600 1rem Geist, system-ui, sans-serif;
+}
+
+.react-login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f3f7fb;
+}
+
+.react-login-card {
+  width: min(440px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid #e3e9f2;
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(30, 41, 59, 0.12);
+}
+
+.react-login-card h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.react-login-card p {
+  margin: 0 0 22px;
+  color: #64748b;
+}
+
+.react-module-card {
+  padding: 24px;
+}
+
+.medicine-grid {
+  grid-template-columns: 1.4fr 1fr .7fr .8fr .9fr 1fr .7fr;
+}
+
+.dark-toggle svg,
+.top-search svg {
+  display: block;
+}
+
+button {
+  font: inherit;
+}
+
+.side-bottom button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #edf5ff, #f8fafc 55%, #eaf8f4);
+}
+
+.login-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #1769e0;
+  color: white;
+  font-weight: 800;
+}
+
+.login-brand h1, .login-brand p, .react-login-card h2 {
+  margin: 0;
+}
+
+.react-login-card label, .quick-form label, .crud-modal label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: #334155;
+  font-size: .88rem;
+  font-weight: 600;
+}
+
+.react-login-card input, .quick-form input, .quick-form select, .quick-form textarea,
+.crud-modal input, .crud-modal select, .crud-modal textarea, .period-select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d9e2ef;
+  border-radius: 7px;
+  padding: 9px 11px;
+  background: var(--surface, #fff);
+  color: inherit;
+}
+
+.login-submit { width: 100%; }
+.list-toolbar, .modal-title, .modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.list-toolbar { padding: 20px 22px; border-bottom: 1px solid #e8edf4; }
+.list-toolbar h2, .list-toolbar p { margin: 0; }
+.list-toolbar form { display: flex; align-items: center; gap: 8px; border: 1px solid #dfe6ef; padding: 8px 12px; border-radius: 7px; }
+.list-toolbar input { border: 0; outline: 0; background: transparent; }
+.responsive-table { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 13px 16px; text-align: left; border-bottom: 1px solid #edf1f6; white-space: nowrap; }
+.data-table th { color: #64748b; text-transform: capitalize; font-size: .76rem; letter-spacing: .04em; background: #f8fafc; }
+.row-buttons { display: flex; gap: 6px; }
+.row-buttons button { width: 32px; height: 32px; border: 1px solid #dfe6ef; border-radius: 6px; background: #fff; color: #1769e0; cursor: pointer; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, .52); }
+.crud-modal { width: min(780px, 100%); max-height: calc(100vh - 48px); overflow: auto; padding: 24px; background: #fff; border-radius: 10px; box-shadow: 0 30px 80px rgba(15, 23, 42, .3); }
+.modal-title { margin-bottom: 20px; }
+.modal-title h2, .modal-title p { margin: 0; }
+.modal-title button { border: 0; background: transparent; font-size: 2rem; cursor: pointer; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.wide-field { grid-column: 1 / -1; }
+.modal-actions { justify-content: flex-end; margin-top: 10px; }
+.summary-strip { display: flex; gap: 12px; margin-bottom: 18px; }
+.summary-strip span { flex: 1; padding: 16px; border-radius: 8px; background: #fff; border: 1px solid #e6ebf2; display: flex; justify-content: space-between; }
+.split-workspace { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.quick-form { background: #fff; border: 1px solid #e6ebf2; border-radius: 8px; padding: 22px; }
+.quick-form h2 { margin: 0 0 20px; }
+.profile-form { max-width: 620px; }
+.cart-lines > div { display: grid; grid-template-columns: 1fr 70px 30px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cart-lines button { border: 0; background: #fee2e2; color: #b91c1c; border-radius: 5px; height: 32px; }
+.sale-total { display: flex; justify-content: space-between; padding: 16px 0; font-size: 1.1rem; }
+.simple-row { display: flex; align-items: center; gap: 12px; padding: 13px 20px; border-top: 1px solid #edf1f6; }
+.simple-row div { display: grid; }
+.simple-row small, .dashboard-note { color: #64748b; }
+.dashboard-note { padding: 8px 18px 24px; line-height: 1.65; }
+.report-bars > div { display: grid; grid-template-columns: 130px 1fr 40px; align-items: center; gap: 12px; margin: 14px 0; }
+.report-bars div div { height: 9px; border-radius: 9px; background: #e8eef6; overflow: hidden; }
+.report-bars i { display: block; height: 100%; background: #1769e0; border-radius: inherit; }
+.module-tabs { display: flex; gap: 4px; margin-bottom: 18px; padding: 5px; width: max-content; background: #e9eff7; border-radius: 8px; }
+.module-tabs button { border: 0; background: transparent; padding: 9px 15px; border-radius: 6px; color: #52637a; cursor: pointer; }
+.module-tabs button.active { background: #fff; color: #1769e0; box-shadow: 0 2px 8px rgba(15, 23, 42, .08); }
+
+[data-theme="dark"] .crud-modal, [data-theme="dark"] .quick-form,
+[data-theme="dark"] .summary-strip span, [data-theme="dark"] .row-buttons button {
+  background: #101827;
+  border-color: #273449;
+  color: #e5edf8;
+}
+[data-theme="dark"] .data-table th { background: #111c2e; color: #9fb0c7; }
+[data-theme="dark"] .data-table td { border-color: #243047; }
+
+@media (max-width: 800px) {
+  .form-grid, .split-workspace { grid-template-columns: 1fr; }
+  .summary-strip { flex-direction: column; }
+  .list-toolbar { align-items: stretch; flex-direction: column; }
+}

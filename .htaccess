@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Laravel is the only application backend.
+  RewriteRule ^api(?:/.*)?$ backend/public/index.php [L,QSA]
+  RewriteRule ^storage/(.*)$ backend/public/storage/$1 [L,QSA]
+
+  # Serve built React assets, then fall back to the SPA for every UI route.
+  RewriteCond frontend/dist/$1 -f
+  RewriteRule ^(.+)$ frontend/dist/$1 [L]
+  RewriteRule ^ frontend/dist/index.html [L]
+</IfModule>

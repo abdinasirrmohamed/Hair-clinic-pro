@@ -19,7 +19,7 @@ class TreatmentController extends Controller
 
         if (auth()->user()->role === 'Doctor') {
             $query->whereHas('patient', function ($q) {
-                $q->where('assigned_doctor_id', auth()->id());
+                $q->where('assigned_doctor_id', auth()->user()->doctor?->id ?? 0);
             });
         }
 

@@ -22,6 +22,7 @@ use App\Http\Controllers\PharmacyInvoiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\SystemController;
 
 // Public auth routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::get('/bootstrap', [SystemController::class, 'bootstrap']);
 
     // User profile (any authenticated user)
     Route::get('/users/profile', [UserController::class, 'profile']);

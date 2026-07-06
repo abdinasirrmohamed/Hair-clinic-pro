@@ -2,13 +2,24 @@
 
 class WaafiPayment
 {
-    private string $endpoint    = 'https://api.waafipay.net/asm';
-    private string $merchantUid = 'M0910291';
-    private string $apiUserId   = '1000416';
-    private string $apiKey      = 'API-675418888AHX';
+    private string $endpoint;
+    private string $merchantUid;
+    private string $apiUserId;
+    private string $apiKey;
+
+    public function __construct()
+    {
+        $this->endpoint = getenv('WAAFI_ENDPOINT') ?: 'https://api.waafipay.net/asm';
+        $this->merchantUid = getenv('WAAFI_MERCHANT_UID') ?: '';
+        $this->apiUserId = getenv('WAAFI_API_USER_ID') ?: '';
+        $this->apiKey = getenv('WAAFI_API_KEY') ?: '';
+    }
 
     public function charge(float $amount, string $accountNo, string $referenceId, string $invoiceId, string $description = 'Hair Clinic Payment'): array
     {
+        if ($this->merchantUid === '' || $this->apiUserId === '' || $this->apiKey === '') {
+            return ['success' => false, 'message' => 'WaafiPay is not configured.'];
+        }
         $accountNo = preg_replace('/\D/', '', $accountNo);
         if (!str_starts_with($accountNo, '252')) {
             $accountNo = '252' . ltrim($accountNo, '0');

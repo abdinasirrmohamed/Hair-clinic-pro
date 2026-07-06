@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'waafi' => [
+        'endpoint' => env('WAAFI_ENDPOINT', 'https://api.waafipay.net/asm'),
+        'merchant_uid' => env('WAAFI_MERCHANT_UID'),
+        'api_user_id' => env('WAAFI_API_USER_ID'),
+        'api_key' => env('WAAFI_API_KEY'),
+    ],
+
 ];

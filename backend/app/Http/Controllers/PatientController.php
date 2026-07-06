@@ -13,7 +13,8 @@ class PatientController extends Controller
     private function scopeForDoctor($query)
     {
         if (auth()->check() && auth()->user()->role === 'Doctor') {
-            $query->where('assigned_doctor_id', auth()->id());
+            $doctorId = auth()->user()->doctor?->id;
+            $query->where('assigned_doctor_id', $doctorId ?? 0);
         }
         return $query;
     }
@@ -49,7 +50,7 @@ class PatientController extends Controller
         ]);
 
         if (auth()->user()->role === 'Doctor') {
-            $validated['assigned_doctor_id'] = auth()->id();
+            $validated['assigned_doctor_id'] = auth()->user()->doctor?->id;
         }
 
         $patient = Patient::create($validated);
@@ -60,7 +61,7 @@ class PatientController extends Controller
 
     public function show(Patient $patient): JsonResponse
     {
-        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->id()) {
+        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->user()->doctor?->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -70,7 +71,7 @@ class PatientController extends Controller
 
     public function update(Request $request, Patient $patient): JsonResponse
     {
-        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->id()) {
+        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->user()->doctor?->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

@@ -489,7 +489,34 @@ if (
 }
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/Hair-clinic-pro');
+    $script_name = '/' . trim(str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? ''), '/');
+    $known_root = '/Hair-clinic-pro';
+    $root_pos = strpos($script_name, $known_root);
+    $app_dirs = ['api', 'appointments', 'audit_logs', 'doctors', 'doctor_appointments', 'finance', 'followups', 'inventory', 'patients', 'payments', 'pharmacy', 'prescriptions', 'reports', 'tools', 'treatments', 'users', 'includes'];
+
+    if ($root_pos !== false) {
+        $base_url = substr($script_name, 0, $root_pos + strlen($known_root));
+    } else {
+        $segments = array_values(array_filter(explode('/', trim($script_name, '/')), 'strlen'));
+        $module_index = null;
+
+        foreach ($segments as $index => $segment) {
+            if (in_array($segment, $app_dirs, true)) {
+                $module_index = $index;
+                break;
+            }
+        }
+
+        if ($module_index !== null) {
+            $base_url = $module_index === 0 ? '' : '/' . implode('/', array_slice($segments, 0, $module_index));
+        } elseif (count($segments) > 1) {
+            $base_url = '/' . implode('/', array_slice($segments, 0, -1));
+        } else {
+            $base_url = '';
+        }
+    }
+
+    define('BASE_URL', rtrim($base_url, '/'));
 }
 
 function e($value)
