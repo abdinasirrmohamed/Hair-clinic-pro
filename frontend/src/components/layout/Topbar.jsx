@@ -9,6 +9,7 @@ export default function Topbar({ onMenuToggle }) {
   const navigate  = useNavigate();
   const [dark,   setDark]   = useState(localStorage.getItem('hcp_theme') === 'dark');
   const [search, setSearch] = useState('');
+  const avatarUrl = user?.profile_photo_url;
 
   const toggleDark = () => {
     const next = !dark;
@@ -99,6 +100,7 @@ export default function Topbar({ onMenuToggle }) {
 
         {/* Notifications */}
         <button
+          onClick={() => navigate('/notifications')}
           className="relative p-2 rounded-lg transition-colors"
           style={{ color: 'var(--clr-muted)' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--clr-hover)'; }}
@@ -122,8 +124,12 @@ export default function Topbar({ onMenuToggle }) {
             </p>
             <p className="text-[10px]" style={{ color: 'var(--clr-section)' }}>{user?.role}</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center ring-2 ring-transparent group-hover:ring-green-500/40 transition-all">
-            <span className="text-[#052e10] text-xs font-bold">{initials(user?.full_name)}</span>
+          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center ring-2 ring-transparent group-hover:ring-green-500/40 transition-all overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={user?.full_name ?? 'Profile'} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[#052e10] text-xs font-bold">{initials(user?.full_name)}</span>
+            )}
           </div>
         </button>
       </div>

@@ -37,6 +37,7 @@ class InventoryMovementController extends Controller
         DB::beginTransaction();
         try {
             $medicine = Medicine::findOrFail($validated['medicine_id']);
+            $oldQuantity = $medicine->quantity;
             
             $medicine->quantity += $validated['quantity'];
             $medicine->unit_price = $validated['unit_cost']; // Updating to latest unit cost
@@ -51,6 +52,8 @@ class InventoryMovementController extends Controller
                 'medicine_id' => $medicine->id,
                 'movement_type' => 'Stock In',
                 'quantity' => $validated['quantity'],
+                'old_quantity' => $oldQuantity,
+                'new_quantity' => $medicine->quantity,
                 'unit_cost' => $validated['unit_cost'],
                 'total_cost' => $validated['unit_cost'] * $validated['quantity'],
                 'supplier_id' => $validated['supplier_id'] ?? null,
@@ -85,6 +88,7 @@ class InventoryMovementController extends Controller
         DB::beginTransaction();
         try {
             $medicine = Medicine::findOrFail($validated['medicine_id']);
+            $oldQuantity = $medicine->quantity;
             
             if ($medicine->quantity < $validated['quantity']) {
                 throw new \Exception('Insufficient stock.');
@@ -97,6 +101,8 @@ class InventoryMovementController extends Controller
                 'medicine_id' => $medicine->id,
                 'movement_type' => 'Stock Out',
                 'quantity' => $validated['quantity'],
+                'old_quantity' => $oldQuantity,
+                'new_quantity' => $medicine->quantity,
                 'unit_cost' => $medicine->unit_price,
                 'total_cost' => $medicine->unit_price * $validated['quantity'],
                 'department' => $validated['department'] ?? null,

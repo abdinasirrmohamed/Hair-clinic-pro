@@ -47,7 +47,7 @@ class AuthController extends Controller
         ]);
 
         $redirect = match($user->role) {
-            'Pharmacy User' => '/pharmacy/medicines',
+            'Pharmacy User' => '/pharmacy/dashboard',
             'Inventory Officer' => '/inventory/medicines',
             default => '/dashboard',
         };
@@ -60,6 +60,8 @@ class AuthController extends Controller
                 'full_name' => $user->full_name,
                 'role' => $user->role,
                 'status' => $user->status,
+                'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
             ],
             'token' => $token,
             'redirect' => $redirect,
@@ -107,9 +109,11 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'full_name' => $user->full_name,
                 'role' => $user->role,
+                'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
             ],
             'token' => $token,
-            'redirect' => '/pharmacy/medicines',
+            'redirect' => '/pharmacy/dashboard',
         ]);
     }
 
@@ -139,6 +143,8 @@ class AuthController extends Controller
             'full_name' => $user->full_name,
             'role' => $user->role,
             'status' => $user->status,
+            'profile_photo_path' => $user->profile_photo_path,
+            'profile_photo_url' => $user->profile_photo_url,
             'created_at' => $user->created_at,
         ]);
     }

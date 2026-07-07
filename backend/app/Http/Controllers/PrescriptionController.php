@@ -15,7 +15,28 @@ class PrescriptionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Prescription::with(['patient', 'doctor'])->withCount('medicines');
-        return response()->json($query->paginate(15));
+
+        if ($request->filled('search')) {
+            $search = $request->string('search');
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('prescription_number', 'like', "%{$search}%")
+                    ->orWhereHas('patient', fn ($patientQuery) => $patientQuery->where('full_name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('doctor_id')) {
+            $query->where('doctor_id', $request->doctor_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('prescription_date', $request->date);
+        }
+
+        return response()->json($query->latest('prescription_date')->paginate($request->integer('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse

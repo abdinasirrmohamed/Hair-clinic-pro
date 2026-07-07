@@ -20,6 +20,11 @@ const ICON_MAP = {
   upcoming_appointments:  Calendar,
   total_medicines:        Pill,
   low_stock_items:        AlertTriangle,
+  expired_medicines:      AlertTriangle,
+  stock_value:            Wallet,
+  outstanding_balances:   Wallet,
+  unpaid_appointments:    CreditCard,
+  pharmacy_revenue_today: CreditCard,
   total_inventory_items:  BarChart2,
   revenue_today:          CreditCard,
   payments_collected:     Wallet,
@@ -46,7 +51,7 @@ export default function Dashboard() {
     .map(([key, val]) => {
       const label = key.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       const value = typeof val === 'number' &&
-        (key.includes('revenue') || key.includes('payment') || key.includes('expenses'))
+        (key.includes('revenue') || key.includes('payment') || key.includes('expenses') || key.includes('balance') || key.includes('value'))
         ? money(val) : val;
       return { label, value, icon: ICON_MAP[key] };
     });

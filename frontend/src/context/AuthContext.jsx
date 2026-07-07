@@ -28,8 +28,9 @@ export function AuthProvider({ children }) {
   useEffect(() => { loadBootstrap(); }, [loadBootstrap]);
 
   const login = async (username, password) => {
-    await doLogin(username, password);
+    const data = await doLogin(username, password);
     await loadBootstrap();
+    return data;
   };
 
   const logout = async () => {

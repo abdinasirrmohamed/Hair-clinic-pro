@@ -12,6 +12,21 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $existingTables = array_filter($this->expectedTables(), fn ($table) => Schema::hasTable($table));
+
+        if (count($existingTables) === count($this->expectedTables())) {
+            return;
+        }
+
+        if ($existingTables !== []) {
+            $missingTables = array_values(array_diff($this->expectedTables(), $existingTables));
+
+            throw new RuntimeException(
+                'The database already contains part of the Hair Clinic Pro schema. '.
+                'Missing tables: '.implode(', ', $missingTables).'. '.
+                'Back up the database, then either complete the missing schema manually or run migrate:fresh for a clean install.'
+            );
+        }
         // ── USERS ──────────────────────────────────────────
         Schema::create('users', function (Blueprint $table) {
             $table->id();
@@ -428,5 +443,37 @@ return new class extends Migration
         foreach ($tables as $table) {
             Schema::dropIfExists($table);
         }
+    }
+
+    private function expectedTables(): array
+    {
+        return [
+            'users',
+            'doctors',
+            'doctor_schedules',
+            'doctor_blocked_dates',
+            'patients',
+            'appointments',
+            'treatments',
+            'followups',
+            'inventory_items',
+            'inventory_orders',
+            'medicines',
+            'suppliers',
+            'inventory_movements',
+            'payments',
+            'receipts',
+            'expenses',
+            'reports',
+            'audit_logs',
+            'prescriptions',
+            'prescription_medicines',
+            'pharmacy_invoices',
+            'pharmacy_invoice_items',
+            'pharmacy_payments',
+            'pharmacy_sales',
+            'pharmacy_sale_medicines',
+            'personal_access_tokens',
+        ];
     }
 };

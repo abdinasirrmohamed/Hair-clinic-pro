@@ -16,10 +16,12 @@ class Medicine extends Model
     protected $fillable = [
         'medicine_name',
         'generic_name',
+        'brand',
         'category',
         'batch_number',
         'barcode',
         'quantity',
+        'buying_price',
         'unit_price',
         'supplier_id',
         'expiry_date',
@@ -27,6 +29,7 @@ class Medicine extends Model
         'reorder_level',
         'supplier',
         'description',
+        'image_path',
     ];
 
     public function movements()

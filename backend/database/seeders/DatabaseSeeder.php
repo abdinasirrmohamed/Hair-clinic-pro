@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
 
         // Users
         DB::table('users')->insert([
-            ['username' => 'admin', 'password' => $hash, 'full_name' => 'Admin User', 'role' => 'Administrator', 'status' => 'Active', 'created_at' => now()],
+            ['username' => 'admin', 'password' => $hash, 'full_name' => 'Tatiko, 'role' => 'Administrator', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'receptionist', 'password' => $hash, 'full_name' => 'Sara Ahmed', 'role' => 'Receptionist', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'doctor', 'password' => $hash, 'full_name' => 'Dr. Mohamed Ali', 'role' => 'Doctor', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'inventory', 'password' => $hash, 'full_name' => 'Hassan Omar', 'role' => 'Inventory Officer', 'status' => 'Active', 'created_at' => now()],

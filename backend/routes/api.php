@@ -23,6 +23,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SystemSettingController;
 
 // Public auth routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -34,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::get('/bootstrap', [SystemController::class, 'bootstrap']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
 
     // User profile (any authenticated user)
     Route::get('/users/profile', [UserController::class, 'profile']);
@@ -55,11 +58,17 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Patients
-    Route::middleware('module:patients')->apiResource('patients', PatientController::class);
+    Route::middleware('module:patients')->group(function () {
+        Route::get('patients/{patient}/timeline', [PatientController::class, 'timeline']);
+        Route::apiResource('patients', PatientController::class);
+    });
 
     // Appointments
     Route::middleware('module:appointments')->group(function () {
         Route::get('appointments/reminders', [AppointmentController::class, 'reminders']);
+        Route::get('appointments/available-slots', [AppointmentController::class, 'availableSlots']);
+        Route::get('appointments/calendar', [AppointmentController::class, 'calendar']);
+        Route::post('appointments/book', [AppointmentController::class, 'book']);
         Route::apiResource('appointments', AppointmentController::class);
     });
 
@@ -129,4 +138,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Audit Logs
     Route::middleware('module:audit_logs')->get('audit-logs', [AuditLogController::class, 'index']);
+
+    // Settings
+    Route::middleware('module:settings')->group(function () {
+        Route::get('settings', [SystemSettingController::class, 'index']);
+        Route::put('settings', [SystemSettingController::class, 'update']);
+    });
 });

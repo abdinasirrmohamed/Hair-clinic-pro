@@ -1,10 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { initials } from '../../utils/formatters';
 import {
   Activity, Archive, BarChart2, Calendar, CalendarCheck, ClipboardList,
   CreditCard, FileText, LayoutDashboard, LogOut, Pill, Scissors,
-  Shield, Stethoscope, UserCheck, UserCircle, Users, Wallet, ChevronRight,
+  Shield, ShoppingCart, Stethoscope, UserCheck, Users, Wallet, History, Settings,
 } from 'lucide-react';
 
 /* ─── Nav groups & items ─── */
@@ -52,12 +52,25 @@ const NAV_GROUPS = [
     label: 'SYSTEM',
     items: [
       { path: '/users', module: 'users', label: 'Users', icon: Users },
+      { path: '/settings', module: 'settings', label: 'Settings', icon: Settings },
     ],
   },
 ];
 
+const PHARMACY_ITEMS = [
+  { path: '/pharmacy/dashboard', label: 'Dashboard', icon: BarChart2 },
+  { path: '/pharmacy/medicines', label: 'Medicines', icon: Pill },
+  { path: '/pharmacy/pos-sales', label: 'POS Sales', icon: ShoppingCart },
+  { path: '/pharmacy/prescription-sales', label: 'Prescription Sales', icon: FileText },
+  { path: '/pharmacy/sales-history', label: 'Sales History', icon: History },
+  { path: '/pharmacy/reports', label: 'Reports', icon: Calendar },
+];
+
 export default function Sidebar({ onClose }) {
   const { user, permissions, logout } = useAuth();
+  const location = useLocation();
+  const isPharmacy = location.pathname.startsWith('/pharmacy');
+  const avatarUrl = user?.profile_photo_url;
 
   const handleLogout = () => logout();
 
@@ -85,8 +98,41 @@ export default function Sidebar({ onClose }) {
       </div>
 
       {/* ── Navigation ── */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-        {NAV_GROUPS.map(({ label, items }) => {
+      {isPharmacy ? (
+        <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 bg-white">
+          <div className="px-4 pt-1 pb-4">
+            <p className="text-xs font-medium" style={{ color: '#166534' }}>Pharmacy</p>
+            <h1 className="text-xl font-bold leading-tight text-black">Workspace</h1>
+          </div>
+
+          {PHARMACY_ITEMS.map(({ path, label, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-colors"
+              style={({ isActive }) => ({
+                background: isActive ? '#dcfce7' : 'transparent',
+                color: isActive ? '#16a34a' : '#2f6b43',
+              })}
+            >
+              <Icon size={16} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold transition-colors text-left"
+            style={{ color: '#ef4444' }}
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+        </nav>
+      ) : (
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+          {NAV_GROUPS.map(({ label, items }) => {
           const visible = items.filter((it) => permissions.includes(it.module));
           if (!visible.length) return null;
           return (
@@ -130,11 +176,12 @@ export default function Sidebar({ onClose }) {
               ))}
             </div>
           );
-        })}
-      </nav>
+          })}
+        </nav>
+      )}
 
       {/* ── Profile + Logout ── */}
-      <div
+      {!isPharmacy && <div
         className="px-2 py-3 space-y-0.5"
         style={{ borderTop: '1px solid var(--clr-border)' }}
       >
@@ -153,11 +200,15 @@ export default function Sidebar({ onClose }) {
           {({ isActive }) => (
             <>
               <div
-                className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0"
+                className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0 overflow-hidden"
               >
-                <span className="text-[10px] font-bold text-[#052e10]">
-                  {initials(user?.full_name)}
-                </span>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={user?.full_name ?? 'Profile'} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-bold text-[#052e10]">
+                    {initials(user?.full_name)}
+                  </span>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p
@@ -193,7 +244,7 @@ export default function Sidebar({ onClose }) {
           <LogOut size={15} />
           <span>Sign Out</span>
         </button>
-      </div>
+      </div>}
     </aside>
   );
 }

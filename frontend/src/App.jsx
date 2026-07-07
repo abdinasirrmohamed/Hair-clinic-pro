@@ -21,6 +21,8 @@ import Pharmacy           from './pages/Pharmacy';
 import Reports            from './pages/Reports';
 import AuditLogs          from './pages/AuditLogs';
 import Profile            from './pages/Profile';
+import Notifications      from './pages/Notifications';
+import Settings           from './pages/Settings';
 
 /* ── Guard: redirect to /login if not authenticated ── */
 function RequireAuth({ children }) {
@@ -34,7 +36,10 @@ function RequireAuth({ children }) {
 function GuestOnly({ children }) {
   const { bootstrap, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (bootstrap) return <Navigate to="/dashboard" replace />;
+  if (bootstrap) {
+    const redirect = bootstrap.user?.role === 'Pharmacy User' ? '/pharmacy/dashboard' : '/dashboard';
+    return <Navigate to={redirect} replace />;
+  }
   return children;
 }
 
@@ -69,9 +74,12 @@ export default function App() {
         <Route path="finance"            element={<Finance />} />
         <Route path="prescriptions"      element={<Prescriptions />} />
         <Route path="inventory"          element={<Inventory />} />
-        <Route path="pharmacy"           element={<Pharmacy />} />
+        <Route path="pharmacy"           element={<Navigate to="/pharmacy/dashboard" replace />} />
+        <Route path="pharmacy/:section"  element={<Pharmacy />} />
         <Route path="reports"            element={<Reports />} />
         <Route path="audit-logs"         element={<AuditLogs />} />
+        <Route path="notifications"      element={<Notifications />} />
+        <Route path="settings"           element={<Settings />} />
         <Route path="profile"            element={<Profile />} />
       </Route>
 

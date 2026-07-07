@@ -19,6 +19,7 @@ class Doctor extends Model
         'specialization',
         'qualification',
         'phone',
+        'consultation_fee',
         'email',
         'license_number',
         'photo',

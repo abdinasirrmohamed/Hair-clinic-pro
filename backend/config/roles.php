@@ -1,11 +1,11 @@
 <?php
 return [
     'module_permissions' => [
-        'Administrator' => ['dashboard','users','doctors','patients','appointments','doctor_appointments','payments','finance','audit_logs','treatments','followups','inventory','pharmacy','prescriptions','reports'],
+        'Administrator' => ['dashboard','users','doctors','patients','appointments','doctor_appointments','payments','finance','audit_logs','treatments','followups','inventory','pharmacy','prescriptions','reports','settings'],
         'Receptionist' => ['dashboard','patients','appointments','payments','reports'],
         'Doctor' => ['dashboard','patients','doctor_appointments','treatments','followups','prescriptions','reports'],
         'Inventory Officer' => ['dashboard','inventory'],
-        'Pharmacy User' => ['dashboard','pharmacy','reports'],
+        'Pharmacy User' => ['dashboard','inventory','pharmacy','prescriptions','reports'],
     ],
     'report_permissions' => [
         'Administrator' => ['users','patients','appointments','treatments','followups','consultations','medical_history','inventory','stock_in','stock_out','low_stock','expired','payments','finance','expenses','profit_loss','audit_logs','pharmacy','pharmacy_sales','prescriptions','top_medicines','inventory_movement','doctor_performance','activity'],

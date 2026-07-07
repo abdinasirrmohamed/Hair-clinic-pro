@@ -7,6 +7,7 @@ use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -85,6 +86,7 @@ class UserController extends Controller
             'full_name' => 'required|string',
             'old_password' => 'nullable|string',
             'password' => 'nullable|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);
 
         if (isset($validated['password'])) {
@@ -94,11 +96,19 @@ class UserController extends Controller
             $user->password = Hash::make($validated['password']);
         }
 
+        if ($request->hasFile('profile_photo')) {
+            if ($user->profile_photo_path) {
+                Storage::disk('public')->delete($user->profile_photo_path);
+            }
+
+            $user->profile_photo_path = $request->file('profile_photo')->store('profile-photos', 'public');
+        }
+
         $user->full_name = $validated['full_name'];
         $user->save();
 
         AuditLogService::log('Updated profile', 'Users', $user->id);
 
-        return response()->json($user);
+        return response()->json($user->fresh());
     }
 }

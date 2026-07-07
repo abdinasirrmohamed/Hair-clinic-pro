@@ -25,8 +25,35 @@ class PharmacySaleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = PharmacySale::with(['creator', 'patient']);
-        return response()->json($query->paginate(15));
+        $query = PharmacySale::with(['creator', 'patient', 'prescription', 'medicines.medicine']);
+
+        if ($request->filled('search')) {
+            $search = $request->string('search');
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('sale_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhereHas('patient', fn ($patientQuery) => $patientQuery->where('full_name', 'like', "%{$search}%"))
+                    ->orWhereHas('prescription', fn ($prescriptionQuery) => $prescriptionQuery->where('prescription_number', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        return response()->json($query->latest('created_at')->paginate($request->integer('per_page', 15)));
     }
 
     public function store(Request $request): JsonResponse
@@ -34,12 +61,13 @@ class PharmacySaleController extends Controller
         $validated = $request->validate([
             'customer_name' => 'nullable|string',
             'patient_id' => 'nullable|exists:patients,id',
-            'payment_method' => ['required', Rule::in(['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'])],
+            'prescription_id' => 'nullable|exists:prescriptions,id',
+            'payment_method' => ['required', Rule::in(['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer', 'Mixed Payment'])],
             'discount_type' => ['required', Rule::in(['None', 'Fixed', 'Percentage'])],
             'discount_value' => 'numeric|min:0',
             'tax_percent' => 'numeric|min:0',
             'notes' => 'nullable|string',
-            'account_no' => 'required_if:payment_method,EVC Plus|required_if:payment_method,Sahal',
+            'account_no' => 'required_if:payment_method,EVC Plus|required_if:payment_method,Zaad|required_if:payment_method,Sahal',
             'medicines' => 'required|array|min:1',
             'medicines.*.medicine_id' => 'required|exists:medicines,id',
             'medicines.*.quantity' => 'required|integer|min:1',
@@ -87,7 +115,7 @@ class PharmacySaleController extends Controller
             $totalAmount = $afterDiscount + $taxAmount;
 
             // Handle Mobile Payment via Waafi
-            if (in_array($validated['payment_method'], ['EVC Plus', 'Sahal'])) {
+            if (in_array($validated['payment_method'], ['EVC Plus', 'Zaad', 'Sahal'])) {
                 $waafiResult = $this->waafi->charge(
                     $totalAmount, 
                     $validated['account_no'], 
@@ -106,6 +134,7 @@ class PharmacySaleController extends Controller
                 'sale_number' => 'SALE-' . date('Ymd') . '-' . rand(1000, 9999),
                 'customer_name' => $validated['customer_name'] ?? null,
                 'patient_id' => $validated['patient_id'] ?? null,
+                'prescription_id' => $validated['prescription_id'] ?? null,
                 'medicine_count' => count($validated['medicines']),
                 'subtotal' => $subtotal,
                 'discount_type' => $validated['discount_type'],
@@ -145,6 +174,10 @@ class PharmacySaleController extends Controller
                     'reference_id' => $sale->id,
                     'issued_by' => auth()->id(),
                 ]);
+            }
+
+            if (!empty($validated['prescription_id'])) {
+                Prescription::where('id', $validated['prescription_id'])->update(['status' => 'Dispensed']);
             }
 
             DB::commit();

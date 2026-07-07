@@ -8,7 +8,7 @@ import { Plus, RefreshCw, Search } from 'lucide-react';
 import { money } from '../../utils/formatters';
 
 export default function CrudPage({
-  title, subtitle, config, lookups, onDataChanged,
+  title, subtitle, config, lookups, onDataChanged, renderActions,
 }) {
   const [rows,    setRows]    = useState([]);
   const [summary, setSummary] = useState(null);
@@ -170,6 +170,7 @@ export default function CrudPage({
             noDelete={config.noDelete}
             onEdit={(row) => setEditor(row)}
             onDelete={handleDelete}
+            renderActions={renderActions}
           />
         )}
       </div>

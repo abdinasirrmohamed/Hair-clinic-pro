@@ -7,6 +7,7 @@ use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class PatientController extends Controller
 {
@@ -42,6 +43,7 @@ class PatientController extends Controller
             'full_name' => 'required|string',
             'phone' => 'required|string',
             'gender' => ['required', Rule::in(['Male', 'Female', 'Other'])],
+            'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
             'date_of_birth' => 'nullable|date',
             'address' => 'nullable|string',
@@ -69,6 +71,60 @@ class PatientController extends Controller
         return response()->json($patient);
     }
 
+    public function timeline(Patient $patient): JsonResponse
+    {
+        if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->user()->doctor?->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $events = collect();
+
+        $patient->appointments()->with(['doctor', 'payment'])->get()->each(function ($appointment) use ($events) {
+            $events->push([
+                'date' => $appointment->appointment_date,
+                'type' => 'Appointment',
+                'title' => $appointment->doctor?->full_name,
+                'description' => "{$appointment->appointment_time} - {$appointment->status}",
+                'amount' => $appointment->fee_at_booking,
+            ]);
+        });
+
+        $patient->payments()->get()->each(function ($payment) use ($events) {
+            $events->push([
+                'date' => Carbon::parse($payment->paid_at ?? $payment->created_at)->toDateString(),
+                'type' => 'Payment',
+                'title' => $payment->payment_method,
+                'description' => $payment->payment_status,
+                'amount' => $payment->amount,
+            ]);
+        });
+
+        $patient->prescriptions()->get()->each(function ($prescription) use ($events) {
+            $events->push([
+                'date' => optional($prescription->created_at)->toDateString(),
+                'type' => 'Prescription',
+                'title' => $prescription->prescription_number,
+                'description' => $prescription->status,
+                'amount' => null,
+            ]);
+        });
+
+        $patient->treatments()->get()->each(function ($treatment) use ($events) {
+            $events->push([
+                'date' => $treatment->treatment_date,
+                'type' => 'Treatment',
+                'title' => $treatment->treatment_name,
+                'description' => $treatment->progress,
+                'amount' => $treatment->cost,
+            ]);
+        });
+
+        return response()->json([
+            'patient' => $patient,
+            'events' => $events->sortByDesc('date')->values(),
+        ]);
+    }
+
     public function update(Request $request, Patient $patient): JsonResponse
     {
         if (auth()->user()->role === 'Doctor' && $patient->assigned_doctor_id !== auth()->user()->doctor?->id) {
@@ -79,6 +135,7 @@ class PatientController extends Controller
             'full_name' => 'string',
             'phone' => 'string',
             'gender' => [Rule::in(['Male', 'Female', 'Other'])],
+            'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
             'date_of_birth' => 'nullable|date',
             'address' => 'nullable|string',

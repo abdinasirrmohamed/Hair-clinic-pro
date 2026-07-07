@@ -9,14 +9,14 @@ export const modules = {
     fields: [field('full_name', 'Full Name'), field('username', 'Username'), field('role', 'Role', 'select', { options: roles }), field('password', 'Password', 'password'), field('status', 'Status', 'select', { options: statuses })],
   },
   doctors: {
-    endpoint: '/doctors', columns: ['full_name', 'specialization', 'phone', 'license_number', 'status'],
-    labels: { full_name: 'Doctor', specialization: 'Specialization', phone: 'Phone', license_number: 'License', status: 'Status' },
-    fields: [field('full_name', 'Full Name'), field('specialization', 'Specialization'), field('qualification', 'Qualification'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
+    endpoint: '/doctors', columns: ['full_name', 'specialization', 'phone', 'consultation_fee', 'license_number', 'status'],
+    labels: { full_name: 'Doctor', specialization: 'Specialization', phone: 'Phone', consultation_fee: 'Fee', license_number: 'License', status: 'Status' },
+    fields: [field('full_name', 'Full Name'), field('specialization', 'Specialization'), field('qualification', 'Qualification'), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
   },
   patients: {
     endpoint: '/patients', columns: ['full_name', 'phone', 'email', 'gender', 'created_at'],
     labels: { full_name: 'Patient Name', phone: 'Phone', email: 'Email', gender: 'Gender', created_at: 'Registered' },
-    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female', 'Other'] }), field('date_of_birth', 'Date of Birth', 'date'), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
+    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female', 'Other'] }), field('age', 'Age', 'number'), field('date_of_birth', 'Date of Birth', 'date'), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
   },
   appointments: {
     endpoint: '/appointments', columns: ['patient.full_name', 'doctor.full_name', 'appointment_date', 'appointment_time', 'reason', 'status'],

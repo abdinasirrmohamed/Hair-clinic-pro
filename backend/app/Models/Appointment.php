@@ -18,6 +18,7 @@ class Appointment extends Model
         'doctor_id',
         'appointment_date',
         'appointment_time',
+        'fee_at_booking',
         'reason',
         'status',
         'reminder_sent',
@@ -41,5 +42,10 @@ class Appointment extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class, 'appointment_id');
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class, 'appointment_id')->latestOfMany();
     }
 }

@@ -10,7 +10,7 @@ export const initials = (name = '') =>
 
 export function displayValue(value, column) {
   if (value == null || value === '') return '—';
-  if (['amount', 'cost', 'unit_price', 'unit_cost', 'total_amount'].includes(column))
+  if (['amount', 'cost', 'unit_price', 'unit_cost', 'total_amount', 'fee_at_booking'].includes(column))
     return money(value);
   if (column.endsWith('_at'))
     return new Date(value).toLocaleDateString('en-US', {

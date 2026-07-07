@@ -18,6 +18,8 @@ class InventoryMovement extends Model
         'medicine_id',
         'movement_type',
         'quantity',
+        'old_quantity',
+        'new_quantity',
         'unit_cost',
         'total_cost',
         'supplier_id',

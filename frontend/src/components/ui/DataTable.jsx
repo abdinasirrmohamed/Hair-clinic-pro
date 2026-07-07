@@ -80,35 +80,30 @@ export default function DataTable({
                 {hasActions && (
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {renderActions ? (
-                        renderActions(row)
-                      ) : (
-                        <>
-                          {!noEdit && (
-                            <button
-                              onClick={() => onEdit?.(row)}
-                              title="Edit"
-                              className="p-2 rounded-lg transition-colors"
-                              style={{ color: 'var(--clr-muted)' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
-                          {!noDelete && (
-                            <button
-                              onClick={() => onDelete?.(row)}
-                              title="Delete"
-                              className="p-2 rounded-lg transition-colors"
-                              style={{ color: 'var(--clr-muted)' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </>
+                      {renderActions?.(row)}
+                      {!noEdit && (
+                        <button
+                          onClick={() => onEdit?.(row)}
+                          title="Edit"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--clr-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      {!noDelete && (
+                        <button
+                          onClick={() => onDelete?.(row)}
+                          title="Delete"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--clr-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       )}
                     </div>
                   </td>

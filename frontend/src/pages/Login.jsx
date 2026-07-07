@@ -17,8 +17,8 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      await login(form.username, form.password);
-      navigate('/dashboard', { replace: true });
+      const data = await login(form.username, form.password);
+      navigate(data?.redirect || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
