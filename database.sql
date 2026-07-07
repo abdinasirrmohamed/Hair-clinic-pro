@@ -1,4 +1,4 @@
-﻿CREATE DATABASE IF NOT EXISTS hair_clinic_system;
+CREATE DATABASE IF NOT EXISTS hair_clinic_system;
 USE hair_clinic_system;
 
 -- For a full demo dataset after importing this schema, run:
@@ -104,7 +104,6 @@ CREATE TABLE IF NOT EXISTS treatments (
     recipient_area_status VARCHAR(255) NULL,
     pre_op_photo VARCHAR(255) NULL,
     post_op_photo VARCHAR(255) NULL,
-    cost DECIMAL(10,2) NOT NULL DEFAULT 0,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE

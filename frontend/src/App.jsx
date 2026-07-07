@@ -1,87 +1,82 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, Moon, Search, Sun } from 'lucide-react';
-import { api, logout, token } from './api.js';
-import { modules } from './modules.js';
-import { moduleRoutes, navigate, routeForPath } from './routes.js';
-import { CrudPage } from './components/CrudPage.jsx';
-import { Login } from './components/Login.jsx';
-import { AuditLogs, Dashboard, DoctorAppointments, Inventory, Pharmacy, Prescriptions, Profile, Reports } from './components/SpecialPages.jsx';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Shell from './components/layout/Shell';
+import { PageLoader } from './components/ui/LoadingSpinner';
 
-function initials(name = '') {
-  return name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+/* Pages */
+import Login              from './pages/Login';
+import Dashboard          from './pages/Dashboard';
+import Patients           from './pages/Patients';
+import Doctors            from './pages/Doctors';
+import Users              from './pages/Users';
+import Appointments       from './pages/Appointments';
+import DoctorAppointments from './pages/DoctorAppointments';
+import Treatments         from './pages/Treatments';
+import Followups          from './pages/Followups';
+import Payments           from './pages/Payments';
+import Finance            from './pages/Finance';
+import Prescriptions      from './pages/Prescriptions';
+import Inventory          from './pages/Inventory';
+import Pharmacy           from './pages/Pharmacy';
+import Reports            from './pages/Reports';
+import AuditLogs          from './pages/AuditLogs';
+import Profile            from './pages/Profile';
+
+/* ── Guard: redirect to /login if not authenticated ── */
+function RequireAuth({ children }) {
+  const { bootstrap, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!bootstrap) return <Navigate to="/login" replace />;
+  return children;
 }
 
-function Link({ href, children, className = '', title }) {
-  return <a href={href} className={className} title={title} onClick={(event) => { if (!event.ctrlKey && !event.metaKey) { event.preventDefault(); navigate(href); } }}>{children}</a>;
+/* ── Guard: redirect authenticated users away from /login ── */
+function GuestOnly({ children }) {
+  const { bootstrap, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (bootstrap) return <Navigate to="/dashboard" replace />;
+  return children;
 }
 
-function Shell({ bootstrap, route, children, onLogout }) {
-  const [dark, setDark] = useState(localStorage.getItem('hcp_theme') === 'dark');
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-theme', dark);
-    localStorage.setItem('hcp_theme', dark ? 'dark' : 'light');
-  }, [dark]);
-  const menu = moduleRoutes.filter((item) => item.module !== 'profile' && bootstrap.permissions.includes(item.module));
-  const roleKey = bootstrap.user.role.toLowerCase().replaceAll(' ', '_');
+export default function App() {
   return (
-    <div className={`dashboard-shell role-${roleKey}`}>
-      <aside className="clinic-sidebar">
-        <div>
-          <Link className="brand-mark" href="/dashboard"><span>Hair Clinic Pro</span><span className={`role-sidebar-badge rbadge-${roleKey}`}>{bootstrap.user.role}</span></Link>
-          <nav className="side-nav">{menu.map((item) => <Link className={route.module === item.module ? 'active' : ''} href={item.path} key={item.module}><i className={`bi ${item.icon}`} /><span>{item.title}</span></Link>)}</nav>
-        </div>
-        <div className="side-bottom"><Link href="/profile"><i className="bi bi-person-circle" /><span>My Profile</span></Link><button type="button" onClick={onLogout}><i className="bi bi-box-arrow-right" /><span>Logout</span></button></div>
-      </aside>
-      <section className="clinic-main">
-        <header className="clinic-topbar patient-topbar">
-          <div className="top-search patient-search"><Search size={18} /><input placeholder="Search patients, records..." onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/patients?search=${encodeURIComponent(event.currentTarget.value)}`); }} /></div>
-          <div className="top-actions admin-profile"><button className="dark-toggle" type="button" onClick={() => setDark(!dark)}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button><button type="button"><Bell size={18} /></button><span className="profile-divider" /><span className="admin-copy"><strong>{bootstrap.user.full_name}</strong><small>{bootstrap.user.role}</small></span><Link className="admin-avatar-link" href="/profile"><div className="admin-avatar">{initials(bootstrap.user.full_name)}</div></Link></div>
-        </header>
-        <main className="clinic-content legacy-content">{children}</main>
-      </section>
-    </div>
+    <Routes>
+      {/* Public */}
+      <Route
+        path="/login"
+        element={<GuestOnly><Login /></GuestOnly>}
+      />
+
+      {/* Protected — all inside the Shell layout */}
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <Shell />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard"          element={<Dashboard />} />
+        <Route path="patients"           element={<Patients />} />
+        <Route path="doctors"            element={<Doctors />} />
+        <Route path="users"              element={<Users />} />
+        <Route path="appointments"       element={<Appointments />} />
+        <Route path="doctor-appointments"element={<DoctorAppointments />} />
+        <Route path="treatments"         element={<Treatments />} />
+        <Route path="followups"          element={<Followups />} />
+        <Route path="payments"           element={<Payments />} />
+        <Route path="finance"            element={<Finance />} />
+        <Route path="prescriptions"      element={<Prescriptions />} />
+        <Route path="inventory"          element={<Inventory />} />
+        <Route path="pharmacy"           element={<Pharmacy />} />
+        <Route path="reports"            element={<Reports />} />
+        <Route path="audit-logs"         element={<AuditLogs />} />
+        <Route path="profile"            element={<Profile />} />
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
-}
-
-export function App() {
-  const [bootstrap, setBootstrap] = useState(null);
-  const [route, setRoute] = useState(() => routeForPath(window.location.pathname));
-  const [loading, setLoading] = useState(Boolean(token()));
-  const [error, setError] = useState('');
-
-  const load = useCallback(async () => {
-    if (!token()) { setBootstrap(null); setLoading(false); return; }
-    setLoading(true); setError('');
-    try { setBootstrap(await api('/bootstrap')); }
-    catch (err) { setError(err.message); localStorage.removeItem('hcp_api_token'); setBootstrap(null); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const change = () => setRoute(routeForPath(window.location.pathname));
-    addEventListener('popstate', change);
-    if (window.location.pathname === '/' || window.location.pathname === '/index.html') navigate('/dashboard');
-    return () => removeEventListener('popstate', change);
-  }, []);
-
-  const content = useMemo(() => {
-    if (!bootstrap) return null;
-    const props = { route, bootstrap, lookups: bootstrap.lookups, refresh: load };
-    if (route.module === 'dashboard') return <Dashboard {...props} />;
-    if (route.module === 'reports') return <Reports {...props} />;
-    if (route.module === 'audit_logs') return <AuditLogs {...props} />;
-    if (route.module === 'doctor_appointments') return <DoctorAppointments {...props} />;
-    if (route.module === 'prescriptions') return <Prescriptions {...props} />;
-    if (route.module === 'inventory') return <Inventory {...props} />;
-    if (route.module === 'pharmacy') return <Pharmacy {...props} />;
-    if (route.module === 'profile') return <Profile {...props} user={bootstrap.user} />;
-    const config = modules[route.module];
-    return config ? <CrudPage route={route} config={config} lookups={bootstrap.lookups} onDataChanged={load} /> : null;
-  }, [bootstrap, route, load]);
-
-  if (loading) return <div className="react-state">Loading Hair Clinic Pro...</div>;
-  if (!bootstrap) return <Login onLogin={load} />;
-  if (error) return <div className="react-state">{error}</div>;
-  return <Shell bootstrap={bootstrap} route={route} onLogout={async () => { await logout(); setBootstrap(null); navigate('/dashboard'); }}>{content}</Shell>;
 }

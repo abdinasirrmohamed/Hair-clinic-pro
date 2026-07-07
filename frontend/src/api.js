@@ -1,54 +1,60 @@
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+import axios from 'axios';
+
 const TOKEN_KEY = 'hcp_api_token';
 
-export function token() {
-  return localStorage.getItem(TOKEN_KEY);
-}
+/* ─── Token helpers ─── */
+export const token   = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (v) => v
+  ? localStorage.setItem(TOKEN_KEY, v)
+  : localStorage.removeItem(TOKEN_KEY);
 
-export function setToken(value) {
-  if (value) localStorage.setItem(TOKEN_KEY, value);
-  else localStorage.removeItem(TOKEN_KEY);
-}
+/* ─── Axios instance ─── */
+const api = axios.create({
+  baseURL: '/api',
+  headers: { Accept: 'application/json' },
+});
 
-export async function api(path, options = {}) {
-  const isForm = options.body instanceof FormData;
-  const headers = {
-    Accept: 'application/json',
-    ...(isForm ? {} : { 'Content-Type': 'application/json' }),
-    ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
-    ...options.headers,
-  };
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
-  if (response.status === 204) return null;
-  const type = response.headers.get('content-type') || '';
-  const payload = type.includes('application/json') ? await response.json() : await response.text();
-  if (!response.ok) {
-    const errors = payload?.errors ? Object.values(payload.errors).flat().join(' ') : '';
-    throw new Error(errors || payload?.message || `Request failed (${response.status})`);
-  }
-  return payload;
-}
+/* Attach Bearer token on every request */
+api.interceptors.request.use((config) => {
+  const t = token();
+  if (t) config.headers.Authorization = `Bearer ${t}`;
+  return config;
+});
 
-export async function login(username, password, pharmacy = false) {
-  const result = await api(pharmacy ? '/auth/pharmacy-login' : '/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
-  });
-  setToken(result.token);
-  return result;
+/* Normalize error messages from Laravel JSON responses */
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const data   = err.response?.data;
+    const errors = data?.errors
+      ? Object.values(data.errors).flat().join(' ')
+      : '';
+    const message = errors || data?.message || `Request failed (${err.response?.status ?? 'network'})`;
+    return Promise.reject(new Error(message));
+  },
+);
+
+export default api;
+
+/* ─── Auth helpers ─── */
+export async function login(username, password) {
+  const { data } = await api.post('/auth/login', { username, password });
+  setToken(data.token);
+  return data;
 }
 
 export async function logout() {
-  try {
-    await api('/auth/logout', { method: 'POST' });
-  } finally {
-    setToken(null);
-  }
+  try { await api.post('/auth/logout'); } finally { setToken(null); }
 }
 
-export function asRows(payload) {
-  if (Array.isArray(payload)) return payload;
+/* ─── Response normaliser ─── */
+export function asRows(payload, payloadKey) {
+  if (payloadKey) {
+    const sub = payload?.[payloadKey];
+    if (Array.isArray(sub)) return sub;
+    if (Array.isArray(sub?.data)) return sub.data;
+  }
+  if (Array.isArray(payload))       return payload;
   if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.expenses?.data)) return payload.expenses.data;
   return [];
 }

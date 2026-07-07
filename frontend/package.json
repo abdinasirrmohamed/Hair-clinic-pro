@@ -1,19 +1,24 @@
 {
   "name": "hair-clinic-pro-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5174 --configLoader runner",
+    "dev": "vite --host 127.0.0.1 --port 5174",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4174"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^7.0.0",
+    "axios": "^1.7.7",
+    "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "lucide-react": "^0.468.0"
+    "react-router-dom": "^6.28.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.0.0",
+    "vite": "^7.0.0"
+  }
 }

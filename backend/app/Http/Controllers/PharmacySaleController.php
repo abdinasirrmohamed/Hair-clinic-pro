@@ -91,8 +91,8 @@ class PharmacySaleController extends Controller
                 $waafiResult = $this->waafi->charge(
                     $totalAmount, 
                     $validated['account_no'], 
-                    'PHR-' . time(), 
-                    'INV-' . time(),
+                    'PHR-' . uniqid(), 
+                    'INV-' . uniqid(),
                     'Pharmacy Sale'
                 );
                 

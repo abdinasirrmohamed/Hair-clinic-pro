@@ -54,7 +54,7 @@ class WaafiPaymentService
                 'transactionInfo' => [
                     'referenceId' => $referenceId,
                     'invoiceId' => $invoiceId,
-                    'amount' => $amount,
+                    'amount' => round((float) $amount, 2),
                     'currency' => 'USD',
                     'description' => $description,
                 ],

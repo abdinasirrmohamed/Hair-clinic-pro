@@ -1,36 +1,82 @@
-# Hair Clinic Pro
+<div align="center">
+  <img src="./frontend/public/vite.svg" alt="Logo" width="80" height="80">
+  <h1 align="center">Hair Clinic Pro</h1>
+  <p align="center">
+    A comprehensive, decoupled management system for modern hair clinics.
+    <br />
+    <strong>Laravel 12 API Backend • React 19 Frontend • WaafiPay Integration</strong>
+  </p>
+</div>
 
-The application is split into two deployable projects:
+---
 
-- `backend/` — Laravel 12 JSON API, authentication, authorization, business rules, database access, reporting, payments, inventory and pharmacy transactions.
-- `frontend/` — React 19 single-page application containing the complete user interface.
+## 🚀 Overview
 
-## Local development
+**Hair Clinic Pro** is a modern, enterprise-grade clinic management system designed to streamline day-to-day operations. The architecture has been completely migrated to a decoupled structure utilizing a robust **Laravel API** and a blazing fast **React Single Page Application (SPA)**.
 
-### Backend
+### ✨ Key Features
+- 🗓️ **Smart Appointments:** Schedule, track, and manage doctor and patient appointments.
+- 💊 **Pharmacy POS:** Built-in Point of Sale system tailored for pharmacy use.
+- 📱 **WaafiPay Integration:** Real-time mobile money integration (EVC Plus, Sahal) directly prompting the customer's phone via USSD.
+- 📦 **Inventory Management:** Live tracking of medicines, auto-deductions upon sale or prescription dispensing.
+- 📝 **E-Prescriptions:** Doctors can prescribe medications which instantly sync with the pharmacy.
+- 📊 **Advanced Analytics:** Comprehensive reporting for daily sales, revenue, and clinical metrics.
+- 🔐 **Role-Based Access Control:** Distinct interfaces and permissions for Admin, Doctor, Receptionist, and Pharmacy.
+- 🌙 **Premium UI:** Fully responsive, modern, dark-mode native interface utilizing Tailwind CSS.
 
-```powershell
+---
+
+## 🛠️ Technology Stack
+
+| Architecture Layer | Technology |
+|--------------------|------------|
+| **Frontend** | React 19, Vite, Tailwind CSS, Lucide Icons, Axios |
+| **Backend** | Laravel 12 (JSON API), Sanctum Authentication |
+| **Database** | MySQL 8.4 |
+| **Payments** | WaafiPay API Sandbox/Production |
+
+---
+
+## 💻 Getting Started (Local Development)
+
+The application is split into two deployable projects. Both must be running simultaneously.
+
+### 1. Backend (Laravel API)
+```bash
 cd backend
-copy .env.example .env
+cp .env.example .env
 composer install
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed
 php artisan storage:link
-php artisan serve --host=127.0.0.1 --port=8000
+php artisan serve
 ```
+*Note: Configure your `DB_USERNAME`, `DB_PASSWORD`, and `WAAFI` API credentials inside the `.env` file.*
 
-Configure the MySQL and WaafiPay values in `backend/.env`. Secrets must never be added to source files.
-
-### Frontend
-
-```powershell
+### 2. Frontend (React UI)
+Open a new terminal window:
+```bash
 cd frontend
 npm install
 npm run dev
 ```
+Navigate to `http://127.0.0.1:5174` in your browser.
 
-Vite serves the SPA on `http://127.0.0.1:5174` and proxies `/api` and `/storage` to Laravel.
+### ⚡ One-Click Setup
+If you are on a fresh Ubuntu environment, you can run the automated setup script from the root directory:
+```bash
+bash setup.sh
+```
 
-## Production
+---
 
-Point the API virtual host at `backend/public`. Build the frontend with `npm run build` and serve `frontend/dist` with SPA fallback enabled. Set `VITE_API_URL` when the API is hosted on a different origin.
+## 🌍 Production Deployment
+
+1. **Backend:** Point your web server (Nginx/Apache) virtual host to the `/backend/public` directory. Ensure `APP_ENV=production`.
+2. **Frontend:** Run `npm run build` inside the `/frontend` directory. Serve the resulting `/dist` folder statically, ensuring SPA fallback (catch-all route) is enabled so React Router can handle navigation. Set `VITE_API_URL` to your production backend URL.
+
+---
+
+<div align="center">
+  <i>Engineered for Performance and Reliability.</i>
+</div>
