@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Patient;
+use App\Models\LabRequest;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class PatientController extends Controller
         $validated = $request->validate([
             'full_name' => 'required|string',
             'phone' => 'required|string',
-            'gender' => ['required', Rule::in(['Male', 'Female', 'Other'])],
+            'gender' => ['required', Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
             'date_of_birth' => 'nullable|date',
@@ -119,6 +120,16 @@ class PatientController extends Controller
             ]);
         });
 
+        LabRequest::with('test')->where('patient_id', $patient->id)->get()->each(function ($lab) use ($events) {
+            $events->push([
+                'date' => $lab->request_date,
+                'type' => 'Lab Test',
+                'title' => $lab->test?->test_name,
+                'description' => $lab->status,
+                'amount' => $lab->test?->price,
+            ]);
+        });
+
         return response()->json([
             'patient' => $patient,
             'events' => $events->sortByDesc('date')->values(),
@@ -134,7 +145,7 @@ class PatientController extends Controller
         $validated = $request->validate([
             'full_name' => 'string',
             'phone' => 'string',
-            'gender' => [Rule::in(['Male', 'Female', 'Other'])],
+            'gender' => [Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
             'date_of_birth' => 'nullable|date',

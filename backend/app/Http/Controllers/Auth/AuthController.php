@@ -49,6 +49,7 @@ class AuthController extends Controller
         $redirect = match($user->role) {
             'Pharmacy User' => '/pharmacy/dashboard',
             'Inventory Officer' => '/inventory/medicines',
+            'Lab User' => '/laboratory',
             default => '/dashboard',
         };
 

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\DoctorSchedule;
 use App\Models\Patient;
 use App\Services\AuditLogService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,12 +18,36 @@ class DoctorAppointmentController extends Controller
         return Doctor::where('user_id', auth()->id())->value('id');
     }
 
+    private function slotAvailable(int $doctorId, string $date, string $time, ?int $excludeId = null): array
+    {
+        $dayOfWeek = Carbon::parse($date)->format('l');
+        $schedule = DoctorSchedule::where('doctor_id', $doctorId)->where('day_of_week', $dayOfWeek)->first();
+
+        if (!$schedule || !$schedule->is_working) {
+            return [false, 'Doctor is not working on this day.'];
+        }
+
+        $slot = Carbon::parse($time);
+        if ($slot->lt(Carbon::parse($schedule->start_time)) || $slot->gte(Carbon::parse($schedule->end_time))) {
+            return [false, 'Selected time is outside doctor working hours.'];
+        }
+
+        $exists = Appointment::where('doctor_id', $doctorId)
+            ->where('appointment_date', $date)
+            ->where('appointment_time', $time)
+            ->whereIn('status', ['Pending', 'Approved'])
+            ->when($excludeId, fn ($query) => $query->where('id', '!=', $excludeId))
+            ->exists();
+
+        return $exists ? [false, 'Slot is already booked.'] : [true, 'Available'];
+    }
+
     public function index(Request $request): JsonResponse
     {
         $doctorId = $this->getDoctorId();
         
         if (!$doctorId) {
-            return response()->json(['message' => 'Doctor profile not found.'], 404);
+            return response()->json(['message' => 'Doctor profile not found. Ask admin to link this user to a doctor profile.'], 404);
         }
 
         $query = Appointment::with('patient')->where('doctor_id', $doctorId);
@@ -51,7 +77,7 @@ class DoctorAppointmentController extends Controller
 
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,id',
-            'appointment_date' => 'required|date',
+            'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required',
             'reason' => 'required|string',
         ]);
@@ -59,6 +85,11 @@ class DoctorAppointmentController extends Controller
         $validated['doctor_id'] = $doctorId;
         $validated['status'] = 'Approved';
         $validated['approved_at'] = now();
+
+        [$available, $msg] = $this->slotAvailable($doctorId, $validated['appointment_date'], $validated['appointment_time']);
+        if (!$available) {
+            return response()->json(['message' => $msg], 422);
+        }
 
         $appointment = Appointment::create($validated);
         AuditLogService::log('Created doctor appointment', 'Doctor Appointments', $appointment->id);
@@ -73,11 +104,18 @@ class DoctorAppointmentController extends Controller
         }
 
         $validated = $request->validate([
-            'appointment_date' => 'date',
+            'appointment_date' => 'date|after_or_equal:today',
             'appointment_time' => 'string',
             'reason' => 'string',
             'notes' => 'nullable|string',
         ]);
+
+        $date = $validated['appointment_date'] ?? $appointment->appointment_date;
+        $time = $validated['appointment_time'] ?? $appointment->appointment_time;
+        [$available, $msg] = $this->slotAvailable($appointment->doctor_id, $date, $time, $appointment->id);
+        if (!$available) {
+            return response()->json(['message' => $msg], 422);
+        }
 
         $appointment->update($validated);
         AuditLogService::log('Updated doctor appointment', 'Doctor Appointments', $appointment->id);

@@ -11,12 +11,17 @@ const PERIODS = [
   { key: 'daily', label: 'Today' },
   { key: 'weekly', label: 'This Week' },
   { key: 'monthly', label: 'This Month' },
+  { key: 'yearly', label: 'This Year' },
   { key: 'custom', label: 'Custom' },
 ];
 
 const REPORT_TYPES = [
   { key: 'overview', label: 'Overview' },
   { key: 'users', label: 'User Reports' },
+  { key: 'patients', label: 'Patients' },
+  { key: 'doctors', label: 'Doctors' },
+  { key: 'medicines', label: 'Medicines' },
+  { key: 'laboratory', label: 'Laboratory' },
   { key: 'finance', label: 'Finance' },
   { key: 'pharmacy', label: 'Pharmacy' },
   { key: 'appointments', label: 'Appointments' },
@@ -25,7 +30,7 @@ const REPORT_TYPES = [
   { key: 'activity', label: 'Activity Logs' },
 ];
 
-const ROLES = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User'];
+const ROLES = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User', 'Lab User'];
 const PAYMENT_METHODS = ['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer', 'Mixed Payment'];
 const STATUSES = ['Paid', 'Partial', 'Pending', 'Completed', 'Cancelled', 'Returned', 'Dispensed'];
 
@@ -86,6 +91,7 @@ export default function Reports() {
     user_id: '',
     role: '',
     doctor_id: '',
+    patient_id: '',
     payment_method: '',
     status: '',
   });
@@ -123,6 +129,10 @@ export default function Reports() {
     if (period === 'daily') fromDate.setDate(date.getDate());
     if (period === 'weekly') fromDate.setDate(date.getDate() - 6);
     if (period === 'monthly') fromDate.setDate(1);
+    if (period === 'yearly') {
+      fromDate.setMonth(0);
+      fromDate.setDate(1);
+    }
 
     setFilters((current) => ({
       ...current,
@@ -140,6 +150,7 @@ export default function Reports() {
       user_id: '',
       role: '',
       doctor_id: '',
+      patient_id: '',
       payment_method: '',
       status: '',
     });
@@ -174,6 +185,7 @@ export default function Reports() {
   const maxTotal = Math.max(...apptByStatus.map((row) => row.total), 1);
   const users = lookups?.users ?? [];
   const doctors = lookups?.doctors ?? [];
+  const patients = lookups?.patients ?? [];
 
   const inputStyle = {
     width: '100%',
@@ -272,6 +284,13 @@ export default function Reports() {
             </select>
           </label>
           <label className="space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={labelStyle}>Patient</span>
+            <select style={inputStyle} value={filters.patient_id} onChange={(e) => setFilter('patient_id', e.target.value)}>
+              <option value="">All patients</option>
+              {patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.full_name}</option>)}
+            </select>
+          </label>
+          <label className="space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-widest" style={labelStyle}>Payment Method</span>
             <select style={inputStyle} value={filters.payment_method} onChange={(e) => setFilter('payment_method', e.target.value)}>
               <option value="">All methods</option>
@@ -319,7 +338,7 @@ export default function Reports() {
 
           {(filters.report_type === 'overview' || filters.report_type === 'finance') && (
             <DataPanel
-              title="Clinic Payments"
+              title="Payments Report"
               columns={['Reference', 'Patient', 'Amount', 'Method', 'Status', 'User', 'Date']}
               rows={(data?.clinic_payments ?? []).map((row) => [
                 row.reference_number,
@@ -352,6 +371,16 @@ export default function Reports() {
 
           {(filters.report_type === 'overview' || filters.report_type === 'appointments') && (
             <>
+              <DataPanel
+                title="Appointment Period Summary"
+                columns={['Period Type', 'Period', 'Total']}
+                rows={[
+                  ...(data?.appointment_periods?.daily ?? []).map((row) => ['Daily', row.period, row.total]),
+                  ...(data?.appointment_periods?.weekly ?? []).map((row) => ['Weekly', row.period, row.total]),
+                  ...(data?.appointment_periods?.monthly ?? []).map((row) => ['Monthly', row.period, row.total]),
+                  ...(data?.appointment_periods?.yearly ?? []).map((row) => ['Yearly', row.period, row.total]),
+                ]}
+              />
               {apptByStatus.length > 0 && (
                 <div className="rounded-xl p-6" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
                   <div className="flex items-center gap-2 mb-6">
@@ -383,19 +412,112 @@ export default function Reports() {
                   row.reason,
                 ])}
               />
+              <DataPanel
+                title="Patient Visit History"
+                columns={['Appointment #', 'Patient', 'Doctor', 'Date', 'Time', 'Service', 'Treatment', 'Medicines', 'Lab Tests']}
+                rows={(data?.visit_history ?? []).map((row) => [
+                  row.appointment_id,
+                  row.patient,
+                  row.doctor,
+                  row.date,
+                  row.time,
+                  row.service,
+                  row.treatments,
+                  row.medicines,
+                  row.lab_tests,
+                ])}
+              />
             </>
           )}
 
           {(filters.report_type === 'overview' || filters.report_type === 'doctor_performance') && (
             <DataPanel
               title="Doctor Performance"
-              columns={['Doctor', 'Specialization', 'Appointments', 'Completed', 'Revenue']}
+              columns={['Doctor', 'Specialization', 'Status', 'Appointments', 'Completed', 'Revenue']}
               rows={(data?.doctor_performance ?? []).map((row) => [
                 row.doctor,
                 row.specialization,
+                row.status,
                 row.appointments,
                 row.completed,
                 money(row.revenue),
+              ])}
+            />
+          )}
+
+          {(filters.report_type === 'overview' || filters.report_type === 'doctors') && (
+            <DataPanel
+              title="Doctor Availability"
+              columns={['Doctor', 'Specialization', 'Date', 'Working', 'Hours', 'Slot', 'Capacity', 'Booked', 'Available']}
+              rows={(data?.doctor_availability ?? []).map((row) => [
+                row.doctor,
+                row.specialization,
+                row.date,
+                row.is_working ? 'Yes' : 'No',
+                row.start && row.end ? `${row.start} - ${row.end}` : '-',
+                row.slot_minutes,
+                row.capacity,
+                row.booked,
+                row.available,
+              ])}
+            />
+          )}
+
+          {(filters.report_type === 'overview' || filters.report_type === 'patients') && (
+            <>
+              <DataPanel
+                title="Patient Reports"
+                columns={['Patient', 'Phone', 'Visits', 'Appointments', 'Treatments', 'Prescriptions', 'Lab Tests', 'Payments']}
+                rows={(data?.patient_reports ?? []).map((row) => [
+                  row.patient,
+                  row.phone,
+                  row.visits,
+                  row.appointments_count,
+                  row.treatments,
+                  row.prescriptions,
+                  row.lab_tests,
+                  money(row.payments),
+                ])}
+              />
+              <DataPanel
+                title="Grouped Patient Reports"
+                columns={['Group Type', 'Group', 'Patients']}
+                rows={[
+                  ...(data?.patient_groups?.by_gender ?? []).map((row) => ['Gender', row.gender, row.total]),
+                  ...(data?.patient_groups?.by_doctor ?? []).map((row) => ['Assigned Doctor', row.doctor, row.total]),
+                ]}
+              />
+            </>
+          )}
+
+          {(filters.report_type === 'overview' || filters.report_type === 'medicines') && (
+            <DataPanel
+              title="Medicine Reports"
+              columns={['Medicine', 'Category', 'Stock', 'Reorder', 'Expired', 'Sold Qty', 'Revenue']}
+              rows={(data?.medicine_reports ?? []).map((row) => [
+                row.medicine,
+                row.category,
+                row.stock,
+                row.reorder_level,
+                row.expired,
+                row.sold_qty,
+                money(row.revenue),
+              ])}
+            />
+          )}
+
+          {(filters.report_type === 'overview' || filters.report_type === 'laboratory') && (
+            <DataPanel
+              title="Laboratory Reports"
+              columns={['Request', 'Patient', 'Doctor', 'Test', 'Date', 'Status', 'Price']}
+              rows={(data?.lab_reports ?? []).map((row) => [
+                row.request_number,
+                row.patient?.full_name,
+                row.doctor?.full_name,
+                row.test?.test_name,
+                row.request_date,
+                row.status,
+                money(row.test?.price ?? 0),
               ])}
             />
           )}

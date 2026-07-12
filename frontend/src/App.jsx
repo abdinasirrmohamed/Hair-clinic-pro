@@ -18,6 +18,7 @@ import Finance            from './pages/Finance';
 import Prescriptions      from './pages/Prescriptions';
 import Inventory          from './pages/Inventory';
 import Pharmacy           from './pages/Pharmacy';
+import Laboratory         from './pages/Laboratory';
 import Reports            from './pages/Reports';
 import AuditLogs          from './pages/AuditLogs';
 import Profile            from './pages/Profile';
@@ -37,7 +38,11 @@ function GuestOnly({ children }) {
   const { bootstrap, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (bootstrap) {
-    const redirect = bootstrap.user?.role === 'Pharmacy User' ? '/pharmacy/dashboard' : '/dashboard';
+    const redirect = bootstrap.user?.role === 'Pharmacy User'
+      ? '/pharmacy/dashboard'
+      : bootstrap.user?.role === 'Lab User'
+        ? '/laboratory'
+        : '/dashboard';
     return <Navigate to={redirect} replace />;
   }
   return children;
@@ -76,6 +81,7 @@ export default function App() {
         <Route path="inventory"          element={<Inventory />} />
         <Route path="pharmacy"           element={<Navigate to="/pharmacy/dashboard" replace />} />
         <Route path="pharmacy/:section"  element={<Pharmacy />} />
+        <Route path="laboratory"         element={<Laboratory />} />
         <Route path="reports"            element={<Reports />} />
         <Route path="audit-logs"         element={<AuditLogs />} />
         <Route path="notifications"      element={<Notifications />} />

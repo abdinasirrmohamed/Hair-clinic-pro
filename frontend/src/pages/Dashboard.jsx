@@ -34,6 +34,15 @@ const ICON_MAP = {
   total_treatments:       Activity,
 };
 
+function ReceptionStat({ value, label, tone = '#2563eb' }) {
+  return (
+    <div className="min-w-[135px]">
+      <p className="text-2xl font-semibold leading-none" style={{ color: tone }}>{value}</p>
+      <p className="mt-2 text-[11px]" style={{ color: '#8a94a6' }}>{label}</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, lookups } = useAuth();
   const [metrics, setMetrics] = useState({});
@@ -57,6 +66,99 @@ export default function Dashboard() {
     });
 
   const recentPatients = (lookups?.patients ?? []).slice(0, 8);
+
+  if (user?.role === 'Receptionist') {
+    const receptionStats = [
+      { key: 'total_patients', label: 'Total Patients', tone: '#3b72cf' },
+      { key: 'today_appointments', label: 'Today Appointments', tone: '#14a59a' },
+      { key: 'upcoming_appointments', label: 'Upcoming Appointments', tone: '#c34b7a' },
+      { key: 'payments_collected', label: 'Payments Collected', tone: '#aa2f2f', money: true },
+      { key: 'unpaid_appointments', label: 'Unpaid Appointments', tone: '#4f7fd8' },
+    ];
+
+    return (
+      <div className="min-h-full animate-fade-in">
+        <div className="rounded-none lg:rounded-sm bg-white px-4 py-5 sm:px-7 sm:py-7 shadow-[0_18px_60px_rgba(114,105,160,0.08)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-xl font-semibold tracking-wide text-[#101828]">Reception Overview</h1>
+              <p className="mt-1 text-xs text-[#8a94a6]">
+                Welcome back, <span className="font-semibold text-[#3b72cf]">{user?.full_name}</span>. Today's front desk activity is below.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#eef2f8] bg-white px-4 py-2 text-xs font-semibold text-[#667085]">
+              <Calendar size={13} className="text-[#3b72cf]" />
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+          </div>
+
+          <div className="mt-7 rounded-sm bg-white px-4 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.055)]">
+            {loading ? (
+              <LoadingSpinner text="Loading metrics..." />
+            ) : (
+              <div className="grid grid-cols-2 gap-5 md:grid-cols-5">
+                {receptionStats.map((stat) => (
+                  <ReceptionStat
+                    key={stat.key}
+                    value={stat.money ? money(metrics[stat.key] ?? 0) : (metrics[stat.key] ?? 0)}
+                    label={stat.label}
+                    tone={stat.tone}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-7 overflow-hidden rounded-sm bg-white shadow-[0_18px_45px_rgba(15,23,42,0.045)]">
+            <div className="flex items-center justify-between border-b border-[#edf1f7] px-4 py-4">
+              <div>
+                <h2 className="text-sm font-semibold text-[#1f2937]">Recent Patients</h2>
+                <p className="mt-1 text-[11px] text-[#8a94a6]">{recentPatients.length} latest records</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#edf1f7] text-[11px] font-semibold text-[#5f6b7a]">
+                    <th className="px-4 py-3">Patient Name</th>
+                    <th className="px-4 py-3">Phone</th>
+                    <th className="px-4 py-3">Gender</th>
+                    <th className="px-4 py-3">Age</th>
+                    <th className="px-4 py-3">Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPatients.map((patient) => (
+                    <tr key={patient.id} className="border-b border-[#f1f4f8] text-xs text-[#344054] hover:bg-[#fbfcff]">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid h-6 w-6 place-items-center rounded-full bg-[#edf5ff] text-[9px] font-bold text-[#4c7fd1]">
+                            {initials(patient.full_name)}
+                          </span>
+                          <span className="font-medium text-[#1f2937]">{patient.full_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{patient.phone ?? '-'}</td>
+                      <td className="px-4 py-3">{patient.gender ?? '-'}</td>
+                      <td className="px-4 py-3">{patient.age ?? '-'}</td>
+                      <td className="px-4 py-3">{patient.created_at ? new Date(patient.created_at).toLocaleDateString() : '-'}</td>
+                    </tr>
+                  ))}
+                  {recentPatients.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-10 text-center text-sm text-[#8a94a6]">
+                        No patients found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">

@@ -4,7 +4,7 @@ import { initials } from '../../utils/formatters';
 import {
   Activity, Archive, BarChart2, Calendar, CalendarCheck, ClipboardList,
   CreditCard, FileText, LayoutDashboard, LogOut, Pill, Scissors,
-  Shield, ShoppingCart, Stethoscope, UserCheck, Users, Wallet, History, Settings,
+  Shield, ShoppingCart, Stethoscope, UserCheck, Users, Wallet, History, Settings, FlaskConical,
 } from 'lucide-react';
 
 /* ─── Nav groups & items ─── */
@@ -39,6 +39,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/inventory', module: 'inventory', label: 'Inventory', icon: Archive },
       { path: '/pharmacy',  module: 'pharmacy',  label: 'Pharmacy',  icon: Pill },
+      { path: '/laboratory', module: 'laboratory', label: 'Laboratory', icon: FlaskConical },
     ],
   },
   {

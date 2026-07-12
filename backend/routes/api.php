@@ -16,6 +16,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\InventoryMovementController;
+use App\Http\Controllers\LabController;
 use App\Http\Controllers\InventoryItemController;
 use App\Http\Controllers\PharmacySaleController;
 use App\Http\Controllers\PharmacyInvoiceController;
@@ -121,6 +122,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('sales/{sale}/return', [PharmacySaleController::class, 'returnSale']);
         Route::post('dispense', [PharmacySaleController::class, 'dispense']);
         Route::apiResource('invoices', PharmacyInvoiceController::class)->only(['index', 'store', 'show']);
+    });
+
+    Route::middleware('module:laboratory')->prefix('lab')->group(function () {
+        Route::get('tests', [LabController::class, 'tests']);
+        Route::post('tests', [LabController::class, 'storeTest']);
+        Route::put('tests/{test}', [LabController::class, 'updateTest']);
+        Route::delete('tests/{test}', [LabController::class, 'destroyTest']);
+        Route::get('requests', [LabController::class, 'requests']);
+        Route::post('requests', [LabController::class, 'storeRequest']);
+        Route::put('requests/{labRequest}', [LabController::class, 'updateRequest']);
     });
 
     // Dashboard

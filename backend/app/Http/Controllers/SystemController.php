@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Treatment;
@@ -16,7 +17,7 @@ class SystemController extends Controller
     public function bootstrap(Request $request): JsonResponse
     {
         $user = $request->user();
-        $permissions = config('roles.module_permissions')[$user->role] ?? [];
+        $permissions = $user->effectiveModulePermissions();
 
         return response()->json([
             'user' => [
@@ -27,8 +28,10 @@ class SystemController extends Controller
                 'status' => $user->status,
                 'profile_photo_path' => $user->profile_photo_path,
                 'profile_photo_url' => $user->profile_photo_url,
+                'module_permissions' => $user->module_permissions,
             ],
             'permissions' => $permissions,
+            'role_permissions' => config('roles.module_permissions'),
             'lookups' => [
                 'patients' => Patient::orderBy('created_at', 'desc')->get([
                     'id', 'full_name', 'phone', 'gender', 'age', 'address',
@@ -38,6 +41,9 @@ class SystemController extends Controller
                 ]),
                 'medicines' => Medicine::orderBy('medicine_name')->get([
                     'id', 'medicine_name', 'quantity', 'unit_price', 'reorder_level',
+                ]),
+                'lab_tests' => LabTest::where('status', 'Active')->orderBy('test_name')->get([
+                    'id', 'test_name', 'category', 'price', 'sample_type',
                 ]),
                 'treatments' => Treatment::latest('treatment_date')->get(['id', 'patient_id', 'treatment_name']),
                 'appointments' => Appointment::latest('appointment_date')->get(['id', 'patient_id', 'appointment_date']),

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
+use App\Models\DoctorSchedule;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +14,70 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    private array $roles = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User', 'Lab User'];
+
+    private function allowedModules(): array
+    {
+        return collect(config('roles.module_permissions'))
+            ->flatten()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function cleanPermissions(?array $permissions): ?array
+    {
+        if ($permissions === null) {
+            return null;
+        }
+
+        $allowed = $this->allowedModules();
+        return collect($permissions)
+            ->filter(fn ($module) => in_array($module, $allowed, true))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function ensureDoctorProfile(User $user): void
+    {
+        if ($user->role !== 'Doctor') {
+            return;
+        }
+
+        $doctor = Doctor::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'full_name' => $user->full_name,
+                'specialization' => 'Hair Loss Specialist',
+                'qualification' => 'MBBS',
+                'phone' => $user->username,
+                'consultation_fee' => 25,
+                'license_number' => 'HC-USER-' . str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+                'experience_years' => 0,
+                'status' => $user->status === 'Active' ? 'Active' : 'Inactive',
+            ]
+        );
+
+        $doctor->update([
+            'full_name' => $user->full_name,
+            'status' => $user->status === 'Active' ? 'Active' : 'Inactive',
+        ]);
+
+        if ($doctor->schedules()->count() === 0) {
+            foreach (['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as $day) {
+                DoctorSchedule::create([
+                    'doctor_id' => $doctor->id,
+                    'day_of_week' => $day,
+                    'start_time' => '08:00:00',
+                    'end_time' => '11:00:00',
+                    'slot_minutes' => 24,
+                    'is_working' => in_array($day, ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'], true),
+                ]);
+            }
+        }
+    }
+
     public function index(Request $request): JsonResponse
     {
         $users = User::paginate(15);
@@ -23,15 +89,20 @@ class UserController extends Controller
         $validated = $request->validate([
             'username' => 'required|string|unique:users',
             'full_name' => 'required|string',
-            'role' => ['required', Rule::in(['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User'])],
+            'role' => ['required', Rule::in($this->roles)],
             'password' => 'required|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
+            'module_permissions' => 'nullable|array',
+            'module_permissions.*' => [Rule::in($this->allowedModules())],
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['status'] = $validated['status'] ?? 'Active';
+        $validated['module_permissions'] = $this->cleanPermissions($validated['module_permissions'] ?? null)
+            ?? (config('roles.module_permissions')[$validated['role']] ?? []);
 
         $user = User::create($validated);
+        $this->ensureDoctorProfile($user);
 
         AuditLogService::log('Created user', 'Users', $user->id);
 
@@ -48,9 +119,11 @@ class UserController extends Controller
         $validated = $request->validate([
             'username' => ['string', Rule::unique('users')->ignore($user->id)],
             'full_name' => 'string',
-            'role' => [Rule::in(['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User'])],
+            'role' => [Rule::in($this->roles)],
             'password' => 'nullable|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'status' => [Rule::in(['Active', 'Inactive'])],
+            'module_permissions' => 'nullable|array',
+            'module_permissions.*' => [Rule::in($this->allowedModules())],
         ]);
 
         if (isset($validated['password'])) {
@@ -59,7 +132,12 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        if (array_key_exists('module_permissions', $validated)) {
+            $validated['module_permissions'] = $this->cleanPermissions($validated['module_permissions']);
+        }
+
         $user->update($validated);
+        $this->ensureDoctorProfile($user);
 
         AuditLogService::log('Updated user', 'Users', $user->id);
 

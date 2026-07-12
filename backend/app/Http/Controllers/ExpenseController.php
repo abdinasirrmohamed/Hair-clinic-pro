@@ -14,6 +14,19 @@ use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
+    private array $categories = [
+        'Staff Salaries',
+        'Medical Supplies',
+        'Medicine Purchases',
+        'Rent',
+        'Electricity',
+        'Water',
+        'Internet',
+        'Equipment Maintenance',
+        'Administrative Expenses',
+        'Miscellaneous Expenses',
+    ];
+
     public function index(Request $request): JsonResponse
     {
         $from = $request->input('from', Carbon::now()->startOfMonth()->toDateString());
@@ -46,7 +59,7 @@ class ExpenseController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'category' => ['required', Rule::in(['Staff Salaries','Medical Supplies','Medicine Purchases','Rent','Electricity','Water','Internet','Equipment Maintenance','Other Expenses'])],
+            'category' => ['required', Rule::in($this->categories)],
             'expense_date' => 'required|date',
             'amount' => 'required|numeric|min:0.01',
             'vendor' => 'nullable|string',
@@ -74,7 +87,7 @@ class ExpenseController extends Controller
     public function update(Request $request, Expense $expense): JsonResponse
     {
         $validated = $request->validate([
-            'category' => [Rule::in(['Staff Salaries','Medical Supplies','Medicine Purchases','Rent','Electricity','Water','Internet','Equipment Maintenance','Other Expenses'])],
+            'category' => [Rule::in($this->categories)],
             'expense_date' => 'date',
             'amount' => 'numeric',
             'vendor' => 'nullable|string',

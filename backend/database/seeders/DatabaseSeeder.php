@@ -20,11 +20,12 @@ class DatabaseSeeder extends Seeder
 
         // Users
         DB::table('users')->insert([
-            ['username' => 'admin', 'password' => $hash, 'full_name' => 'Tatiko, 'role' => 'Administrator', 'status' => 'Active', 'created_at' => now()],
+            ['username' => 'admin', 'password' => $hash, 'full_name' => 'Tatiko Admin', 'role' => 'Administrator', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'receptionist', 'password' => $hash, 'full_name' => 'Sara Ahmed', 'role' => 'Receptionist', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'doctor', 'password' => $hash, 'full_name' => 'Dr. Mohamed Ali', 'role' => 'Doctor', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'inventory', 'password' => $hash, 'full_name' => 'Hassan Omar', 'role' => 'Inventory Officer', 'status' => 'Active', 'created_at' => now()],
             ['username' => 'pharmacy', 'password' => $hash, 'full_name' => 'Fatima Yusuf', 'role' => 'Pharmacy User', 'status' => 'Active', 'created_at' => now()],
+            ['username' => 'lab', 'password' => $hash, 'full_name' => 'Lab Technician', 'role' => 'Lab User', 'status' => 'Active', 'created_at' => now()],
         ]);
 
         $doctorUserId = DB::table('users')->where('username', 'doctor')->value('id');
@@ -33,7 +34,7 @@ class DatabaseSeeder extends Seeder
         DB::table('doctors')->insert([
             'user_id' => $doctorUserId,
             'full_name' => 'Dr. Mohamed Ali',
-            'specialization' => 'Hair Restoration Specialist',
+            'specialization' => 'Hair Loss Specialist',
             'qualification' => 'MBBS, MD Dermatology',
             'phone' => '+252 61 234 5678',
             'email' => 'dr.mohamed@hairclinic.com',
@@ -53,8 +54,8 @@ class DatabaseSeeder extends Seeder
                 'doctor_id' => $doctorId,
                 'day_of_week' => $day,
                 'start_time' => '08:00:00',
-                'end_time' => '16:00:00',
-                'slot_minutes' => 30,
+                'end_time' => '11:00:00',
+                'slot_minutes' => 24,
                 'is_working' => in_array($day, ['Saturday','Sunday','Monday','Tuesday','Wednesday']) ? 1 : 0,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -78,7 +79,7 @@ class DatabaseSeeder extends Seeder
                 'date_of_birth' => '1990-01-15',
                 'address' => 'Mogadishu, Somalia',
                 'medical_notes' => null,
-                'assigned_doctor_id' => $doctorUserId,
+                'assigned_doctor_id' => $doctorId,
                 'created_at' => now(),
             ]));
         }
@@ -96,6 +97,12 @@ class DatabaseSeeder extends Seeder
             ['company_name' => 'MedSupply Co', 'contact_person' => 'John Smith', 'phone' => '+252611000001', 'email' => 'info@medsupply.com', 'address' => 'Mogadishu', 'created_at' => now()],
             ['company_name' => 'PharmaCorp', 'contact_person' => 'Jane Doe', 'phone' => '+252611000002', 'email' => 'sales@pharmacorp.com', 'address' => 'Nairobi', 'created_at' => now()],
             ['company_name' => 'VitaHealth', 'contact_person' => 'Ali Hassan', 'phone' => '+252611000003', 'email' => 'orders@vitahealth.com', 'address' => 'Dubai', 'created_at' => now()],
+        ]);
+
+        DB::table('lab_tests')->insert([
+            ['test_name' => 'Hair Mineral Analysis', 'category' => 'Hair & Scalp Lab', 'price' => 20.00, 'sample_type' => 'Hair Sample', 'status' => 'Active', 'description' => 'Checks mineral imbalance related to hair loss.', 'created_at' => now(), 'updated_at' => now()],
+            ['test_name' => 'Vitamin D Test', 'category' => 'Blood Test', 'price' => 15.00, 'sample_type' => 'Blood', 'status' => 'Active', 'description' => 'Vitamin D level screening.', 'created_at' => now(), 'updated_at' => now()],
+            ['test_name' => 'Thyroid Profile', 'category' => 'Hormone Test', 'price' => 25.00, 'sample_type' => 'Blood', 'status' => 'Active', 'description' => 'TSH/T3/T4 screening for hair loss evaluation.', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $this->command->info('Database seeded successfully!');

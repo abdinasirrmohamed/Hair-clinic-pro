@@ -7,6 +7,8 @@ use App\Models\AuditLog;
 use App\Models\Doctor;
 use App\Models\Expense;
 use App\Models\InventoryMovement;
+use App\Models\LabRequest;
+use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -40,8 +42,12 @@ class ReportController extends Controller
             'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
             'filters' => $filters,
             'summary' => [
+                'doctors' => Doctor::where('status', 'Active')->count(),
                 'patients' => Patient::whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count(),
                 'appointments' => $appointments,
+                'payments' => (clone $paymentQuery)->count(),
+                'medicines' => Medicine::count(),
+                'lab_requests' => LabRequest::whereBetween('request_date', [$from->toDateString(), $to->toDateString()])->count(),
                 'treatments' => Treatment::whereBetween('treatment_date', [$from->toDateString(), $to->toDateString()])->count(),
                 'clinic_revenue' => (float) $revenue,
                 'pharmacy_revenue' => (float) $pharmacyRevenue,
@@ -56,6 +62,27 @@ class ReportController extends Controller
             'pharmacy_sales' => (clone $saleQuery)->with(['patient', 'creator'])->latest()->limit(50)->get(),
             'expenses_by_user' => (clone $expenseQuery)->with('creator')->latest('expense_date')->limit(50)->get(),
             'appointments' => (clone $appointmentQuery)->with(['patient', 'doctor'])->latest('appointment_date')->limit(50)->get(),
+            'visit_history' => $this->visitHistory($from, $to, $filters),
+            'appointment_periods' => $this->appointmentPeriods($from, $to, $filters),
+            'patient_reports' => $this->patientReports($from, $to, $filters),
+            'patient_groups' => [
+                'by_gender' => Patient::selectRaw('gender, COUNT(*) total')->groupBy('gender')->get(),
+                'by_doctor' => Patient::with('assignedDoctor')
+                    ->selectRaw('assigned_doctor_id, COUNT(*) total')
+                    ->groupBy('assigned_doctor_id')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'doctor' => $row->assignedDoctor?->full_name ?? 'Unassigned',
+                        'total' => $row->total,
+                    ]),
+            ],
+            'doctor_availability' => $this->doctorAvailability($request->input('availability_date', now()->toDateString())),
+            'medicine_reports' => $this->medicineReports($from, $to),
+            'lab_reports' => LabRequest::with(['patient', 'appointment', 'doctor', 'test', 'creator'])
+                ->whereBetween('request_date', [$from->toDateString(), $to->toDateString()])
+                ->latest('request_date')
+                ->limit(80)
+                ->get(),
             'user_activity' => (clone $auditQuery)->latest()->limit(80)->get(),
             'user_totals' => $this->userTotals($from, $to, $filters),
             'doctor_performance' => $this->doctorPerformance($from, $to, $filters),
@@ -99,6 +126,29 @@ class ReportController extends Controller
                         $row->patient?->full_name, $row->doctor?->full_name, $row->appointment_date,
                         $row->appointment_time, $row->status, $row->reason,
                     ]);
+                }
+            } elseif ($reportType === 'laboratory') {
+                fputcsv($out, ['Request', 'Patient', 'Doctor', 'Test', 'Date', 'Status', 'Price']);
+                foreach (LabRequest::with(['patient', 'doctor', 'test'])->whereBetween('request_date', [$from->toDateString(), $to->toDateString()])->latest('request_date')->get() as $row) {
+                    fputcsv($out, [
+                        $row->request_number, $row->patient?->full_name, $row->doctor?->full_name,
+                        $row->test?->test_name, $row->request_date, $row->status, $row->test?->price,
+                    ]);
+                }
+            } elseif ($reportType === 'doctors') {
+                fputcsv($out, ['Doctor', 'Specialization', 'Status', 'Appointments', 'Completed', 'Revenue']);
+                foreach ($this->doctorPerformance($from, $to, $filters) as $row) {
+                    fputcsv($out, [$row['doctor'], $row['specialization'], $row['status'], $row['appointments'], $row['completed'], $row['revenue']]);
+                }
+            } elseif ($reportType === 'patients') {
+                fputcsv($out, ['Patient', 'Phone', 'Visits', 'Appointments', 'Treatments', 'Prescriptions', 'Lab Tests', 'Payments']);
+                foreach ($this->patientReports($from, $to, $filters) as $row) {
+                    fputcsv($out, [$row['patient'], $row['phone'], $row['visits'], $row['appointments_count'], $row['treatments'], $row['prescriptions'], $row['lab_tests'], $row['payments']]);
+                }
+            } elseif ($reportType === 'medicines') {
+                fputcsv($out, ['Medicine', 'Category', 'Stock', 'Reorder', 'Expired', 'Sold Qty', 'Revenue']);
+                foreach ($this->medicineReports($from, $to) as $row) {
+                    fputcsv($out, [$row['medicine'], $row['category'], $row['stock'], $row['reorder_level'], $row['expired'], $row['sold_qty'], $row['revenue']]);
                 }
             } elseif ($reportType === 'activity') {
                 fputcsv($out, ['User', 'Role', 'Module', 'Action', 'IP Address', 'Date']);
@@ -168,6 +218,7 @@ class ReportController extends Controller
             : match ($period) {
                 'daily' => $to->copy(),
                 'weekly' => $to->copy()->subDays(6),
+                'yearly' => $to->copy()->startOfYear(),
                 default => $to->copy()->startOfMonth(),
             };
         return [$from, $to];
@@ -180,6 +231,7 @@ class ReportController extends Controller
             'user_id' => $request->input('user_id'),
             'role' => $request->input('role'),
             'doctor_id' => $request->input('doctor_id'),
+            'patient_id' => $request->input('patient_id'),
             'payment_method' => $request->input('payment_method'),
             'status' => $request->input('status'),
         ];
@@ -232,6 +284,9 @@ class ReportController extends Controller
 
         if ($filters['doctor_id']) {
             $query->where('doctor_id', $filters['doctor_id']);
+        }
+        if ($filters['patient_id']) {
+            $query->where('patient_id', $filters['patient_id']);
         }
         if ($filters['status']) {
             $query->where('status', $filters['status']);
@@ -309,9 +364,146 @@ class ReportController extends Controller
                 return [
                     'doctor' => $doctor->full_name,
                     'specialization' => $doctor->specialization,
+                    'status' => $doctor->status,
                     'appointments' => (clone $appointments)->count(),
                     'completed' => (clone $appointments)->where('status', 'Completed')->count(),
                     'revenue' => (float) (clone $appointments)->sum('fee_at_booking'),
+                ];
+            });
+    }
+
+    private function doctorAvailability(string $date)
+    {
+        $day = Carbon::parse($date)->format('l');
+
+        return Doctor::with(['schedules' => fn ($query) => $query->where('day_of_week', $day)])
+            ->where('status', 'Active')
+            ->orderBy('full_name')
+            ->get()
+            ->map(function (Doctor $doctor) use ($date) {
+                $schedule = $doctor->schedules->first();
+                $booked = Appointment::where('doctor_id', $doctor->id)
+                    ->where('appointment_date', $date)
+                    ->whereIn('status', ['Pending', 'Approved'])
+                    ->count();
+                $minutes = $schedule ? max(5, (int) $schedule->slot_minutes) : 0;
+                $totalMinutes = $schedule ? Carbon::parse($schedule->start_time)->diffInMinutes(Carbon::parse($schedule->end_time)) : 0;
+                $capacity = $minutes > 0 ? intdiv($totalMinutes, $minutes) : 0;
+
+                return [
+                    'doctor' => $doctor->full_name,
+                    'specialization' => $doctor->specialization,
+                    'date' => $date,
+                    'is_working' => (bool) ($schedule?->is_working),
+                    'start' => $schedule ? Carbon::parse($schedule->start_time)->format('H:i') : null,
+                    'end' => $schedule ? Carbon::parse($schedule->end_time)->format('H:i') : null,
+                    'slot_minutes' => $minutes,
+                    'capacity' => $capacity,
+                    'booked' => $booked,
+                    'available' => max(0, $capacity - $booked),
+                ];
+            });
+    }
+
+    private function appointmentPeriods(Carbon $from, Carbon $to, array $filters): array
+    {
+        $base = $this->appointmentsQuery($from, $to, $filters);
+
+        return [
+            'daily' => (clone $base)->selectRaw('appointment_date period, COUNT(*) total')->groupBy('period')->orderBy('period')->get(),
+            'weekly' => (clone $base)->selectRaw('YEARWEEK(appointment_date) period, COUNT(*) total')->groupBy('period')->orderBy('period')->get(),
+            'monthly' => (clone $base)->selectRaw("DATE_FORMAT(appointment_date, '%Y-%m') period, COUNT(*) total")->groupBy('period')->orderBy('period')->get(),
+            'yearly' => (clone $base)->selectRaw('YEAR(appointment_date) period, COUNT(*) total')->groupBy('period')->orderBy('period')->get(),
+        ];
+    }
+
+    private function patientReports(Carbon $from, Carbon $to, array $filters)
+    {
+        return Patient::when($filters['patient_id'] ?? null, fn ($query) => $query->where('id', $filters['patient_id']))
+            ->orderBy('full_name')
+            ->get()
+            ->map(function (Patient $patient) use ($from, $to) {
+                $appointments = Appointment::where('patient_id', $patient->id)->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()]);
+                $treatments = Treatment::where('patient_id', $patient->id)->whereBetween('treatment_date', [$from->toDateString(), $to->toDateString()]);
+                $labs = LabRequest::where('patient_id', $patient->id)->whereBetween('request_date', [$from->toDateString(), $to->toDateString()]);
+                $payments = Payment::where('patient_id', $patient->id)->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
+
+                return [
+                    'patient' => $patient->full_name,
+                    'phone' => $patient->phone,
+                    'visits' => (clone $appointments)->count(),
+                    'appointments_count' => (clone $appointments)->count(),
+                    'appointments' => (clone $appointments)->with(['doctor', 'payment'])->latest('appointment_date')->get(),
+                    'treatments' => (clone $treatments)->count(),
+                    'prescriptions' => $patient->prescriptions()->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count(),
+                    'lab_tests' => (clone $labs)->count(),
+                    'payments' => (float) (clone $payments)->whereIn('payment_status', ['Paid', 'Partial'])->sum('amount'),
+                ];
+            });
+    }
+
+    private function medicineReports(Carbon $from, Carbon $to)
+    {
+        return Medicine::orderBy('medicine_name')->get()->map(function (Medicine $medicine) use ($from, $to) {
+            $sold = $medicine->pharmacySaleMedicines()
+                ->whereHas('sale', fn ($query) => $query->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->where('status', '!=', 'Returned'));
+
+            return [
+                'medicine' => $medicine->medicine_name,
+                'category' => $medicine->category,
+                'stock' => $medicine->quantity,
+                'reorder_level' => $medicine->reorder_level,
+                'expired' => $medicine->expiry_date < now()->toDateString() ? 'Yes' : 'No',
+                'sold_qty' => (clone $sold)->sum('quantity'),
+                'revenue' => (float) (clone $sold)->sum('subtotal'),
+            ];
+        });
+    }
+
+    private function visitHistory(Carbon $from, Carbon $to, array $filters)
+    {
+        return Appointment::with(['patient', 'doctor'])
+            ->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()])
+            ->when($filters['patient_id'] ?? null, fn ($query) => $query->where('patient_id', $filters['patient_id']))
+            ->when($filters['doctor_id'] ?? null, fn ($query) => $query->where('doctor_id', $filters['doctor_id']))
+            ->latest('appointment_date')
+            ->limit(100)
+            ->get()
+            ->map(function (Appointment $appointment) {
+                $treatments = Treatment::where('patient_id', $appointment->patient_id)
+                    ->whereDate('treatment_date', $appointment->appointment_date)
+                    ->pluck('treatment_name')
+                    ->all();
+                $medicines = $appointment->patient?->prescriptions()
+                    ->with('medicines.medicine')
+                    ->whereDate('created_at', $appointment->appointment_date)
+                    ->get()
+                    ->flatMap(fn ($prescription) => $prescription->medicines->map(fn ($item) => $item->medicine?->medicine_name))
+                    ->filter()
+                    ->values()
+                    ->all() ?? [];
+                $labs = LabRequest::with('test')
+                    ->where('appointment_id', $appointment->id)
+                    ->orWhere(fn ($query) => $query
+                        ->where('patient_id', $appointment->patient_id)
+                        ->whereDate('request_date', $appointment->appointment_date))
+                    ->get()
+                    ->map(fn ($lab) => $lab->test?->test_name)
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                return [
+                    'appointment_id' => $appointment->id,
+                    'patient' => $appointment->patient?->full_name,
+                    'doctor' => $appointment->doctor?->full_name,
+                    'date' => $appointment->appointment_date,
+                    'time' => $appointment->appointment_time,
+                    'status' => $appointment->status,
+                    'service' => $appointment->reason,
+                    'treatments' => implode(', ', $treatments),
+                    'medicines' => implode(', ', $medicines),
+                    'lab_tests' => implode(', ', $labs),
                 ];
             });
     }

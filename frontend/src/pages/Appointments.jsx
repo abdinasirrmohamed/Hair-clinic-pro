@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Printer, RefreshCw, Save } from 'lucide-react';
+import { CalendarCheck, Plus, Printer, RefreshCw, Save, Search } from 'lucide-react';
 import api, { asRows } from '../api';
 import { useAuth } from '../context/AuthContext';
 import Alert from '../components/ui/Alert';
-import DataTable from '../components/ui/DataTable';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import Modal from '../components/ui/Modal';
 import ReceiptModal from '../components/ui/ReceiptModal';
-import { money } from '../utils/formatters';
+import StatusBadge from '../components/ui/StatusBadge';
+import { initials, money } from '../utils/formatters';
 
 const initialForm = {
   patient_name: '',
@@ -20,11 +21,21 @@ const initialForm = {
   payment_method: 'Cash',
   payment_status: 'Paid',
   account_no: '',
+  payment_notes: '',
 };
 
 const paymentMethods = ['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'];
 const paymentStatuses = ['Paid', 'Partial', 'Outstanding'];
 const mobileMethods = ['EVC Plus', 'Zaad', 'Sahal'];
+
+function ReceptionStat({ value, label, tone = '#2563eb' }) {
+  return (
+    <div className="min-w-[135px]">
+      <p className="text-2xl font-semibold leading-none" style={{ color: tone }}>{value}</p>
+      <p className="mt-2 text-[11px]" style={{ color: '#8a94a6' }}>{label}</p>
+    </div>
+  );
+}
 
 export default function Appointments() {
   const { lookups, refresh } = useAuth();
@@ -34,8 +45,11 @@ export default function Appointments() {
   const [loading, setLoading] = useState(true);
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [slots, setSlots] = useState([]);
+  const [workingHours, setWorkingHours] = useState(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [message, setMessage] = useState({ text: '', type: 'info' });
   const [receipt, setReceipt] = useState(null);
 
@@ -78,6 +92,7 @@ export default function Appointments() {
   useEffect(() => {
     if (!form.doctor_id || !form.appointment_date) {
       setSlots([]);
+      setWorkingHours(null);
       setField('appointment_time', '');
       return;
     }
@@ -90,6 +105,7 @@ export default function Appointments() {
       .then(({ data }) => {
         if (cancelled) return;
         setSlots(data.slots ?? []);
+        setWorkingHours(data.working_hours ?? null);
         setForm((current) => {
           const stillAvailable = (data.slots ?? []).some((slot) => slot.time === current.appointment_time);
           return stillAvailable ? current : { ...current, appointment_time: '' };
@@ -123,6 +139,7 @@ export default function Appointments() {
       setMessage({ text: 'Appointment booked, patient registered, and payment recorded successfully.', type: 'success' });
       setReceipt(data.payment ?? null);
       setForm(initialForm);
+      setBookingOpen(false);
       await loadAppointments();
       await loadCalendar();
       await refresh();
@@ -133,251 +150,292 @@ export default function Appointments() {
     }
   };
 
-  const inputStyle = {
-    width: '100%',
-    border: '1px solid var(--clr-border)',
-    background: 'var(--clr-search-bg)',
-    color: 'var(--clr-text)',
-    borderRadius: '.625rem',
-    padding: '.7rem .8rem',
-    fontSize: '.875rem',
-    outline: 'none',
-  };
-  const readonlyStyle = {
-    ...inputStyle,
-    background: 'var(--clr-hover)',
-    color: 'var(--clr-muted)',
-  };
-  const labelClass = 'block text-[10px] font-bold uppercase tracking-widest mb-1.5';
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const stats = useMemo(() => {
+    const today = rows.filter((row) => row.appointment_date === todayKey).length;
+    const pending = rows.filter((row) => row.status === 'Pending').length;
+    const completed = rows.filter((row) => row.status === 'Completed').length;
+    const paid = rows.filter((row) => row.payment?.payment_status === 'Paid').length;
+    return { total: rows.length, today, pending, completed, paid };
+  }, [rows, todayKey]);
+
+  const filteredRows = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    if (!text) return rows;
+    return rows.filter((row) => [
+      row.patient?.full_name,
+      row.patient?.phone,
+      row.doctor?.full_name,
+      row.status,
+      row.payment?.payment_status,
+    ].some((value) => String(value ?? '').toLowerCase().includes(text)));
+  }, [query, rows]);
+
+  const upcomingCards = calendarRows.slice(0, 6);
   const needsAccount = mobileMethods.includes(form.payment_method) && form.payment_status === 'Paid';
-  const groupedCalendar = calendarRows.reduce((groups, item) => {
-    groups[item.date] = groups[item.date] ? [...groups[item.date], item] : [item];
-    return groups;
-  }, {});
+
+  const fieldClass = 'w-full rounded-lg border border-[#edf1f7] bg-white px-3 py-2.5 text-sm text-[#1f2937] outline-none focus:border-[#7aa7ff]';
+  const labelClass = 'block text-[10px] font-semibold uppercase tracking-widest text-[#8993a4] mb-1.5';
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--clr-text)' }}>Appointment Booking</h1>
-          <p className="mt-1 text-xs" style={{ color: 'var(--clr-muted)' }}>
-            Register a patient, book the appointment, and record the doctor fee in one clean step.
-          </p>
-        </div>
-        <button
-          onClick={loadAppointments}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold"
-          style={{ color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}
-        >
-          <RefreshCw size={13} />
-          Refresh
-        </button>
-      </div>
-
-      {message.text && <Alert message={message.text} variant={message.type} />}
-
-      <form
-        onSubmit={submit}
-        className="rounded-xl overflow-hidden"
-        style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}
-      >
-        <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <CalendarCheck size={16} className="text-green-500" />
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>New Appointment</h2>
-        </div>
-
-        <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Patient Name</span>
-            <input style={inputStyle} value={form.patient_name} onChange={(e) => setField('patient_name', e.target.value)} required />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Patient Phone</span>
-            <input style={inputStyle} value={form.patient_phone} onChange={(e) => setField('patient_phone', e.target.value)} required />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Gender</span>
-            <select style={inputStyle} value={form.gender} onChange={(e) => setField('gender', e.target.value)}>
-              <option>Male</option>
-              <option>Female</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Age</span>
-            <input type="number" min="0" max="120" style={inputStyle} value={form.age} onChange={(e) => setField('age', e.target.value)} />
-          </label>
-          <label className="md:col-span-2">
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Address</span>
-            <input style={inputStyle} value={form.address} onChange={(e) => setField('address', e.target.value)} />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Doctor</span>
-            <select style={inputStyle} value={form.doctor_id} onChange={(e) => setField('doctor_id', e.target.value)} required>
-              <option value="">Select doctor</option>
-              {doctors.map((doctor) => (
-                <option key={doctor.id} value={doctor.id}>{doctor.full_name}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Doctor Phone</span>
-            <input style={readonlyStyle} value={selectedDoctor?.phone ?? ''} readOnly placeholder="Auto-filled" />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Specialization</span>
-            <input style={readonlyStyle} value={selectedDoctor?.specialization ?? ''} readOnly placeholder="Auto-filled" />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Doctor Fee</span>
-            <input style={readonlyStyle} value={selectedDoctor ? money(selectedDoctor.consultation_fee ?? 0) : ''} readOnly placeholder="Auto-filled" />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Appointment Date</span>
-            <input type="date" style={inputStyle} value={form.appointment_date} onChange={(e) => setField('appointment_date', e.target.value)} required />
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Appointment Time</span>
-            <select
-              style={inputStyle}
-              value={form.appointment_time}
-              onChange={(e) => setField('appointment_time', e.target.value)}
-              required
-              disabled={!form.doctor_id || !form.appointment_date || slotsLoading}
+    <div className="min-h-full animate-fade-in">
+      <div className="rounded-none lg:rounded-sm bg-white px-4 py-5 sm:px-7 sm:py-7 shadow-[0_18px_60px_rgba(114,105,160,0.08)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-wide text-[#101828]">Reception Appointments</h1>
+            <p className="mt-1 text-xs text-[#8a94a6]">Book patients, collect consultation payments, and print receipts.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full border border-[#eef2f8] text-[#8a94a6]">
+              <Search size={15} />
+            </div>
+            <button
+              onClick={() => setBookingOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-[#b7cdf8] bg-white px-4 py-2 text-xs font-semibold text-[#3b73d9] shadow-[0_8px_22px_rgba(65,111,190,0.12)]"
             >
-              <option value="">{slotsLoading ? 'Loading slots...' : 'Select available slot'}</option>
-              {slots.map((slot) => (
-                <option key={slot.time} value={slot.time}>{slot.label}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Payment Method</span>
-            <select style={inputStyle} value={form.payment_method} onChange={(e) => setField('payment_method', e.target.value)}>
-              {paymentMethods.map((method) => <option key={method}>{method}</option>)}
-            </select>
-          </label>
-          <label>
-            <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Payment Status</span>
-            <select style={inputStyle} value={form.payment_status} onChange={(e) => setField('payment_status', e.target.value)}>
-              {paymentStatuses.map((status) => <option key={status}>{status}</option>)}
-            </select>
-          </label>
-          {needsAccount && (
-            <label>
-              <span className={labelClass} style={{ color: 'var(--clr-section)' }}>Mobile Account</span>
-              <input
-                style={inputStyle}
-                value={form.account_no}
-                onChange={(e) => setField('account_no', e.target.value)}
-                placeholder="25261..."
-                required
-              />
-            </label>
+              <Plus size={14} />
+              Add Appointment
+            </button>
+          </div>
+        </div>
+
+        {message.text && <div className="mt-5"><Alert message={message.text} variant={message.type} /></div>}
+
+        <div className="mt-7 rounded-sm bg-white px-4 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.055)]">
+          <div className="grid grid-cols-2 gap-5 md:grid-cols-5">
+            <ReceptionStat value={stats.total} label="Total Appointments" tone="#3b72cf" />
+            <ReceptionStat value={stats.today} label="Today" tone="#14a59a" />
+            <ReceptionStat value={stats.pending} label="Pending" tone="#c34b7a" />
+            <ReceptionStat value={stats.completed} label="Completed" tone="#aa2f2f" />
+            <ReceptionStat value={stats.paid} label="Paid Bookings" tone="#4f7fd8" />
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-[#1f2937]">Appointment List</h2>
+            <p className="mt-1 text-[11px] text-[#8a94a6]">{filteredRows.length} records shown</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-[#eef2f8] bg-white px-3 py-2">
+            <Search size={14} className="text-[#9aa5b5]" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search patient or doctor"
+              className="w-52 bg-transparent text-xs text-[#111827] outline-none placeholder:text-[#a7b0bf]"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          {loading ? (
+            <LoadingSpinner text="Loading appointments..." />
+          ) : (
+            <table className="w-full min-w-[860px] border-collapse text-left">
+              <thead>
+                <tr className="border-y border-[#edf1f7] text-[11px] font-semibold text-[#5f6b7a]">
+                  <th className="px-4 py-3">Patient Name</th>
+                  <th className="px-4 py-3">Doctor</th>
+                  <th className="px-4 py-3">Appointment Date</th>
+                  <th className="px-4 py-3">Time</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <tr key={row.id} className="border-b border-[#f1f4f8] text-xs text-[#344054] hover:bg-[#fbfcff]">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="grid h-6 w-6 place-items-center rounded-full bg-[#edf5ff] text-[9px] font-bold text-[#4c7fd1]">
+                          {initials(row.patient?.full_name)}
+                        </span>
+                        <div>
+                          <p className="font-medium text-[#1f2937]">{row.patient?.full_name ?? '-'}</p>
+                          <p className="text-[10px] text-[#98a2b3]">{row.patient?.phone ?? ''}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{row.doctor?.full_name ?? '-'}</td>
+                    <td className="px-4 py-3">{row.appointment_date}</td>
+                    <td className="px-4 py-3">{String(row.appointment_time ?? '').slice(0, 5)}</td>
+                    <td className="px-4 py-3">{money(row.fee_at_booking)}</td>
+                    <td className="px-4 py-3"><StatusBadge value={row.status} /></td>
+                    <td className="px-4 py-3 text-right">
+                      {row.payment ? (
+                        <button
+                          onClick={() => setReceipt(row.payment)}
+                          title="Print receipt"
+                          className="inline-grid h-8 w-8 place-items-center rounded-full border border-[#e6edf7] text-[#4f7fd8] hover:bg-[#eef5ff]"
+                        >
+                          <Printer size={14} />
+                        </button>
+                      ) : (
+                        <span className="text-[#a7b0bf]">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredRows.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-10 text-center text-sm text-[#8a94a6]">
+                      No appointments found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           )}
         </div>
 
-        <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
-            style={{ background: '#22c55e', color: '#052e10', border: 'none' }}
-          >
-            <Save size={14} />
-            {saving ? 'Saving...' : 'Save Appointment'}
-          </button>
-        </div>
-      </form>
-
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
-        <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Appointment Calendar</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--clr-muted)' }}>This month by day, doctor, patient, and payment state.</p>
+        <div className="mt-7">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[#1f2937]">This Month Calendar</h2>
+              <p className="mt-1 text-[11px] text-[#8a94a6]">Upcoming appointment snapshots.</p>
+            </div>
+            <button onClick={loadCalendar} className="inline-flex items-center gap-2 rounded-full border border-[#eef2f8] px-3 py-2 text-xs font-semibold text-[#667085]">
+              <RefreshCw size={13} />
+              Refresh
+            </button>
           </div>
-          <button onClick={loadCalendar} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{ color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}>
-            <RefreshCw size={13} /> Refresh
-          </button>
-        </div>
-        {calendarLoading ? (
-          <LoadingSpinner text="Loading calendar..." />
-        ) : (
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {Object.keys(groupedCalendar).length === 0 && (
-              <p className="text-sm p-4" style={{ color: 'var(--clr-muted)' }}>No appointments in this month.</p>
-            )}
-            {Object.entries(groupedCalendar).map(([date, items]) => (
-              <div key={date} className="rounded-lg p-3" style={{ background: 'var(--clr-search-bg)', border: '1px solid var(--clr-border)' }}>
-                <p className="text-xs font-bold text-green-500">{date}</p>
-                <div className="mt-3 space-y-2">
-                  {items.map((item) => (
-                    <div key={item.id} className="rounded-md p-2" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
-                      <div className="flex justify-between gap-3">
-                        <span className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>{item.time}</span>
-                        <span className="text-[11px] font-bold text-green-500">{item.status}</span>
-                      </div>
-                      <p className="text-xs mt-1" style={{ color: 'var(--clr-text)' }}>{item.patient}</p>
-                      <p className="text-[11px]" style={{ color: 'var(--clr-muted)' }}>{item.doctor} - {item.payment_status ?? 'No payment'}</p>
-                    </div>
-                  ))}
+          {calendarLoading ? (
+            <LoadingSpinner text="Loading calendar..." />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {upcomingCards.map((item) => (
+                <div key={item.id} className="rounded-lg border border-[#edf1f7] bg-[#fbfcff] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold text-[#3b72cf]">{item.date} at {item.time}</p>
+                    <StatusBadge value={item.payment_status ?? 'Outstanding'} />
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-[#1f2937]">{item.patient}</p>
+                  <p className="mt-0.5 text-xs text-[#8a94a6]">{item.doctor}</p>
                 </div>
+              ))}
+              {upcomingCards.length === 0 && (
+                <p className="text-sm text-[#8a94a6]">No appointments in this month.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {bookingOpen && (
+        <Modal
+          title="New Appointment"
+          subtitle="Register patient, choose an available doctor slot, and record payment."
+          onClose={() => setBookingOpen(false)}
+          size="xl"
+        >
+          <form onSubmit={submit}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <label>
+                <span className={labelClass}>Patient Name</span>
+                <input className={fieldClass} value={form.patient_name} onChange={(e) => setField('patient_name', e.target.value)} required />
+              </label>
+              <label>
+                <span className={labelClass}>Patient Phone</span>
+                <input className={fieldClass} value={form.patient_phone} onChange={(e) => setField('patient_phone', e.target.value)} required />
+              </label>
+              <label>
+                <span className={labelClass}>Gender</span>
+                <select className={fieldClass} value={form.gender} onChange={(e) => setField('gender', e.target.value)}>
+                  <option>Male</option>
+                  <option>Female</option>
+                </select>
+              </label>
+              <label>
+                <span className={labelClass}>Age</span>
+                <input type="number" min="0" max="120" className={fieldClass} value={form.age} onChange={(e) => setField('age', e.target.value)} />
+              </label>
+              <label className="md:col-span-2">
+                <span className={labelClass}>Address</span>
+                <input className={fieldClass} value={form.address} onChange={(e) => setField('address', e.target.value)} />
+              </label>
+              <label>
+                <span className={labelClass}>Doctor</span>
+                <select className={fieldClass} value={form.doctor_id} onChange={(e) => setField('doctor_id', e.target.value)} required>
+                  <option value="">Select doctor</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>{doctor.full_name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className={labelClass}>Doctor Phone</span>
+                <input className={`${fieldClass} bg-[#f8fafc] text-[#7a8494]`} value={selectedDoctor?.phone ?? ''} readOnly placeholder="Auto-filled" />
+              </label>
+              <label>
+                <span className={labelClass}>Doctor Fee</span>
+                <input className={`${fieldClass} bg-[#f8fafc] text-[#7a8494]`} value={selectedDoctor ? money(selectedDoctor.consultation_fee ?? 0) : ''} readOnly placeholder="Auto-filled" />
+              </label>
+              <label>
+                <span className={labelClass}>Appointment Date</span>
+                <input type="date" min={todayKey} className={fieldClass} value={form.appointment_date} onChange={(e) => setField('appointment_date', e.target.value)} required />
+              </label>
+              <label>
+                <span className={labelClass}>Appointment Time</span>
+                <select
+                  className={fieldClass}
+                  value={form.appointment_time}
+                  onChange={(e) => setField('appointment_time', e.target.value)}
+                  required
+                  disabled={!form.doctor_id || !form.appointment_date || slotsLoading}
+                >
+                  <option value="">{slotsLoading ? 'Loading slots...' : 'Select available slot'}</option>
+                  {slots.map((slot) => (
+                    <option key={slot.time} value={slot.time}>{slot.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className={labelClass}>Payment Method</span>
+                <select className={fieldClass} value={form.payment_method} onChange={(e) => setField('payment_method', e.target.value)}>
+                  {paymentMethods.map((method) => <option key={method}>{method}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className={labelClass}>Payment Status</span>
+                <select className={fieldClass} value={form.payment_status} onChange={(e) => setField('payment_status', e.target.value)}>
+                  {paymentStatuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+              {needsAccount && (
+                <label>
+                  <span className={labelClass}>Mobile Account</span>
+                  <input className={fieldClass} value={form.account_no} onChange={(e) => setField('account_no', e.target.value)} placeholder="25261..." required />
+                </label>
+              )}
+              <label className="md:col-span-2 xl:col-span-3">
+                <span className={labelClass}>Payment Message / Description</span>
+                <textarea rows={2} className={fieldClass} value={form.payment_notes} onChange={(e) => setField('payment_notes', e.target.value)} placeholder="Optional payment note..." />
+              </label>
+            </div>
+
+            {workingHours && (
+              <div className="mt-4 rounded-lg border border-[#edf1f7] bg-[#fbfcff] p-3 text-xs text-[#667085]">
+                Working hours: <strong className="text-[#1f2937]">{workingHours.start} - {workingHours.end}</strong>
+                {' '} | Duration: <strong className="text-[#1f2937]">{workingHours.slot_minutes} min</strong>
+                {' '} | Capacity: <strong className="text-[#1f2937]">{workingHours.capacity}</strong>
+                {' '} | Available: <strong className="text-[#14a59a]">{workingHours.available}</strong>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
 
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <p className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Recent Appointments</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--clr-muted)' }}>{rows.length} records</p>
-        </div>
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <DataTable
-            columns={['patient.full_name', 'doctor.full_name', 'appointment_date', 'appointment_time', 'fee_at_booking', 'status']}
-            labels={{
-              'patient.full_name': 'Patient',
-              'doctor.full_name': 'Doctor',
-              appointment_date: 'Date',
-              appointment_time: 'Time',
-              fee_at_booking: 'Fee',
-              status: 'Status',
-            }}
-            rows={rows}
-            noEdit
-            noDelete
-            renderActions={(row) => row.payment ? (
+            <div className="mt-6 flex justify-end">
               <button
-                onClick={() => setReceipt(row.payment)}
-                title="Print receipt"
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: 'var(--clr-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-full bg-[#3b72cf] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
-                <Printer size={14} />
+                <Save size={14} />
+                {saving ? 'Saving...' : 'Save Appointment'}
               </button>
-            ) : null}
-          />
-        )}
-      </div>
-
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <p className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Recently Registered Patients</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--clr-muted)' }}>Patients created or reused during booking appear from the database.</p>
-        </div>
-        <DataTable
-          columns={['full_name', 'phone', 'gender', 'age', 'address']}
-          labels={{ full_name: 'Patient', phone: 'Phone', gender: 'Gender', age: 'Age', address: 'Address' }}
-          rows={(lookups?.patients ?? []).slice(0, 8)}
-          noEdit
-          noDelete
-        />
-      </div>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {receipt && (
         <ReceiptModal

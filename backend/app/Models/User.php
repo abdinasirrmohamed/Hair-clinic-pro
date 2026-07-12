@@ -23,6 +23,7 @@ class User extends Authenticatable
         'role',
         'status',
         'profile_photo_path',
+        'module_permissions',
     ];
 
     protected $hidden = [
@@ -32,6 +33,17 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
+
+    protected $casts = [
+        'module_permissions' => 'array',
+    ];
+
+    public function effectiveModulePermissions(): array
+    {
+        return is_array($this->module_permissions)
+            ? $this->module_permissions
+            : (config('roles.module_permissions')[$this->role] ?? []);
+    }
 
     public function getProfilePhotoUrlAttribute(): ?string
     {

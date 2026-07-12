@@ -1,5 +1,23 @@
-const roles = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User'];
+const roles = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User', 'Lab User'];
 const statuses = ['Active', 'Inactive'];
+const doctorSpecializations = [
+  'Hair Transplant Surgeon',
+  'FUE Hair Transplant Specialist',
+  'DHI Hair Transplant Specialist',
+  'Dermatologist',
+  'Hair Loss Specialist',
+  'PRP Specialist',
+  'Scalp Treatment Specialist',
+  'Cosmetic Hair Transplant Surgeon',
+];
+const doctorQualifications = [
+  'MBBS',
+  'MBBS, MD Dermatology',
+  'MD Dermatology',
+  'Fellowship in Hair Restoration',
+  'Board Certified Dermatologist',
+  'Cosmetic Surgery Fellowship',
+];
 const field = (name, label, type = 'text', extra = {}) => ({ name, label, type, ...extra });
 
 export const modules = {
@@ -11,12 +29,12 @@ export const modules = {
   doctors: {
     endpoint: '/doctors', columns: ['full_name', 'specialization', 'phone', 'consultation_fee', 'license_number', 'status'],
     labels: { full_name: 'Doctor', specialization: 'Specialization', phone: 'Phone', consultation_fee: 'Fee', license_number: 'License', status: 'Status' },
-    fields: [field('full_name', 'Full Name'), field('specialization', 'Specialization'), field('qualification', 'Qualification'), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
+    fields: [field('full_name', 'Full Name'), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
   },
   patients: {
     endpoint: '/patients', columns: ['full_name', 'phone', 'email', 'gender', 'created_at'],
     labels: { full_name: 'Patient Name', phone: 'Phone', email: 'Email', gender: 'Gender', created_at: 'Registered' },
-    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female', 'Other'] }), field('age', 'Age', 'number'), field('date_of_birth', 'Date of Birth', 'date'), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
+    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female'] }), field('age', 'Age', 'number'), field('date_of_birth', 'Date of Birth', 'date'), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
   },
   appointments: {
     endpoint: '/appointments', columns: ['patient.full_name', 'doctor.full_name', 'appointment_date', 'appointment_time', 'reason', 'status'],
@@ -36,13 +54,13 @@ export const modules = {
   },
   payments: {
     endpoint: '/payments', noEdit: true, columns: ['patient.full_name', 'amount', 'payment_method', 'payment_status', 'reference_number', 'created_at'],
-    labels: { 'patient.full_name': 'Patient', amount: 'Amount', payment_method: 'Method', payment_status: 'Status', reference_number: 'Reference', created_at: 'Date' },
-    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('appointment_id', 'Appointment', 'lookup', { lookup: 'appointments' }), field('amount', 'Amount', 'number'), field('payment_method', 'Payment Method', 'select', { options: ['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'] }), field('payment_status', 'Payment Status', 'select', { options: ['Paid', 'Partial', 'Outstanding'] }), field('reference_number', 'Reference Number'), field('account_no', 'Mobile Account'), field('notes', 'Notes', 'textarea')],
+    labels: { 'patient.full_name': 'Patient', amount: 'Amount', payment_method: 'Method', payment_status: 'Status', reference_number: 'Reference', notes: 'Message', created_at: 'Date' },
+    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('appointment_id', 'Appointment', 'lookup', { lookup: 'appointments' }), field('amount', 'Amount', 'number'), field('payment_method', 'Payment Method', 'select', { options: ['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'] }), field('payment_status', 'Payment Status', 'select', { options: ['Paid', 'Partial', 'Outstanding'] }), field('reference_number', 'Reference Number'), field('account_no', 'Mobile Account'), field('notes', 'Message / Description', 'textarea')],
   },
   finance: {
     endpoint: '/expenses', payloadKey: 'expenses', columns: ['expense_date', 'category', 'vendor', 'description', 'amount'],
     labels: { expense_date: 'Date', category: 'Category', vendor: 'Vendor', description: 'Description', amount: 'Amount' },
-    fields: [field('expense_date', 'Expense Date', 'date'), field('category', 'Category', 'select', { options: ['Staff Salaries', 'Medical Supplies', 'Medicine Purchases', 'Rent', 'Electricity', 'Water', 'Internet', 'Equipment Maintenance', 'Other Expenses'] }), field('amount', 'Amount', 'number'), field('vendor', 'Vendor'), field('description', 'Description', 'textarea'), field('receipt', 'Receipt', 'file')],
+    fields: [field('expense_date', 'Expense Date', 'date'), field('category', 'Category', 'select', { options: ['Staff Salaries', 'Medical Supplies', 'Medicine Purchases', 'Rent', 'Electricity', 'Water', 'Internet', 'Equipment Maintenance', 'Administrative Expenses', 'Miscellaneous Expenses'] }), field('amount', 'Amount', 'number'), field('vendor', 'Vendor'), field('description', 'Description', 'textarea'), field('receipt', 'Receipt', 'file')],
   },
   inventory: {
     endpoint: '/medicines', columns: ['medicine_name', 'category', 'quantity', 'reorder_level', 'unit_price', 'expiry_date', 'supplier'],

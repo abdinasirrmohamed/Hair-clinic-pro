@@ -15,8 +15,9 @@ class CheckModuleAccess
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $permissions = config('roles.module_permissions');
-        $allowedModules = $permissions[$user->role] ?? [];
+        $allowedModules = method_exists($user, 'effectiveModulePermissions')
+            ? $user->effectiveModulePermissions()
+            : (config('roles.module_permissions')[$user->role] ?? []);
 
         if (!in_array($module, $allowedModules, true)) {
             return response()->json([

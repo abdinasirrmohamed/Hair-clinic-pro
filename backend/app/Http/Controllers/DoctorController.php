@@ -13,6 +13,26 @@ use Illuminate\Validation\Rule;
 
 class DoctorController extends Controller
 {
+    private array $specializations = [
+        'Hair Transplant Surgeon',
+        'FUE Hair Transplant Specialist',
+        'DHI Hair Transplant Specialist',
+        'Dermatologist',
+        'Hair Loss Specialist',
+        'PRP Specialist',
+        'Scalp Treatment Specialist',
+        'Cosmetic Hair Transplant Surgeon',
+    ];
+
+    private array $qualifications = [
+        'MBBS',
+        'MBBS, MD Dermatology',
+        'MD Dermatology',
+        'Fellowship in Hair Restoration',
+        'Board Certified Dermatologist',
+        'Cosmetic Surgery Fellowship',
+    ];
+
     public function index(Request $request): JsonResponse
     {
         $doctors = Doctor::with('user')->paginate(15);
@@ -23,8 +43,8 @@ class DoctorController extends Controller
     {
         $validated = $request->validate([
             'full_name' => 'required|string',
-            'specialization' => 'required|string',
-            'qualification' => 'nullable|string',
+            'specialization' => ['required', Rule::in($this->specializations)],
+            'qualification' => ['nullable', Rule::in($this->qualifications)],
             'phone' => 'required|string',
             'consultation_fee' => 'nullable|numeric|min:0',
             'email' => 'nullable|email',
@@ -51,8 +71,8 @@ class DoctorController extends Controller
                     'doctor_id' => $doctor->id,
                     'day_of_week' => $day,
                     'start_time' => '08:00:00',
-                    'end_time' => '16:00:00',
-                    'slot_minutes' => 30,
+                    'end_time' => '11:00:00',
+                    'slot_minutes' => 24,
                     'is_working' => in_array($day, ['Saturday','Sunday','Monday','Tuesday','Wednesday']),
                 ]);
             }
@@ -77,8 +97,8 @@ class DoctorController extends Controller
     {
         $validated = $request->validate([
             'full_name' => 'string',
-            'specialization' => 'string',
-            'qualification' => 'nullable|string',
+            'specialization' => [Rule::in($this->specializations)],
+            'qualification' => ['nullable', Rule::in($this->qualifications)],
             'phone' => 'string',
             'consultation_fee' => 'nullable|numeric|min:0',
             'email' => 'nullable|email',
