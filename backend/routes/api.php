@@ -26,6 +26,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SystemSettingController;
+use App\Http\Controllers\WaafiController;
 
 // Public auth routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -95,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payments
     Route::middleware('module:payments')->group(function () {
+        Route::get('payments/gateway-logs', [PaymentController::class, 'gatewayLogs']);
         Route::apiResource('payments', PaymentController::class)->only(['index', 'store', 'show']);
         Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt']);
     });
@@ -154,5 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('module:settings')->group(function () {
         Route::get('settings', [SystemSettingController::class, 'index']);
         Route::put('settings', [SystemSettingController::class, 'update']);
+        Route::get('settings/waafi/status', [WaafiController::class, 'status']);
+        Route::post('settings/waafi/test', [WaafiController::class, 'test']);
     });
 });

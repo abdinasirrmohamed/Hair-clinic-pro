@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Save, Settings as SettingsIcon } from 'lucide-react';
+import { CreditCard, Save, Settings as SettingsIcon } from 'lucide-react';
 import api from '../api';
 import Alert from '../components/ui/Alert';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -18,12 +18,33 @@ export default function Settings() {
   const [form, setForm] = useState(null);
   const [message, setMessage] = useState({ text: '', type: 'info' });
   const [saving, setSaving] = useState(false);
+  const [waafi, setWaafi] = useState(null);
+  const [waafiTest, setWaafiTest] = useState({ account_no: '', amount: '0.01' });
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     api.get('/settings')
       .then(({ data }) => setForm(data))
       .catch((err) => setMessage({ text: err.message, type: 'danger' }));
+    api.get('/settings/waafi/status')
+      .then(({ data }) => setWaafi(data))
+      .catch((err) => setMessage({ text: err.message, type: 'danger' }));
   }, []);
+
+  const testWaafi = async (event) => {
+    event.preventDefault();
+    if (!window.confirm(`This will send a real $${waafiTest.amount} WaafiPay charge request. Continue?`)) return;
+    setTesting(true);
+    setMessage({ text: '', type: 'info' });
+    try {
+      const { data } = await api.post('/settings/waafi/test', waafiTest);
+      setMessage({ text: `${data.message} Transaction: ${data.transaction_id || 'N/A'}`, type: 'success' });
+    } catch (err) {
+      setMessage({ text: err.message, type: 'danger' });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -86,6 +107,40 @@ export default function Settings() {
           <button disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ background: '#22c55e', color: '#052e10', border: 'none' }}>
             <Save size={14} />
             {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </form>
+
+      <form onSubmit={testWaafi} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
+        <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid var(--clr-border)' }}>
+          <div className="flex items-center gap-2">
+            <CreditCard size={16} className="text-green-500" />
+            <div>
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>WaafiPay Test</h2>
+              <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>Sends a real test charge; maximum $1.</p>
+            </div>
+          </div>
+          <span className="px-2 py-1 rounded-full text-xs font-bold" style={{ color: waafi?.configured ? '#22c55e' : '#f87171', background: waafi?.configured ? '#22c55e18' : '#f8717118' }}>
+            {waafi?.configured ? 'Configured' : 'Not configured'}
+          </span>
+        </div>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label>
+            <span className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--clr-section)' }}>Mobile Account</span>
+            <input required style={inputStyle} placeholder="25261XXXXXXX" value={waafiTest.account_no} onChange={(e) => setWaafiTest((current) => ({ ...current, account_no: e.target.value }))} />
+          </label>
+          <label>
+            <span className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--clr-section)' }}>Test Amount (USD)</span>
+            <input required type="number" min="0.01" max="1" step="0.01" style={inputStyle} value={waafiTest.amount} onChange={(e) => setWaafiTest((current) => ({ ...current, amount: e.target.value }))} />
+          </label>
+          <p className="md:col-span-2 text-xs" style={{ color: 'var(--clr-muted)' }}>
+            Endpoint: {waafi?.endpoint ?? '—'} · Merchant: {waafi?.merchant || '—'}
+          </p>
+        </div>
+        <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
+          <button disabled={testing || !waafi?.configured} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ background: '#22c55e', color: '#052e10', border: 'none' }}>
+            <CreditCard size={14} />
+            {testing ? 'Testing...' : 'Send Test Charge'}
           </button>
         </div>
       </form>

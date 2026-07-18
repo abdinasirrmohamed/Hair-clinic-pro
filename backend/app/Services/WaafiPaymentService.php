@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\PaymentGatewayLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class WaafiPaymentService
 {
@@ -23,11 +25,12 @@ class WaafiPaymentService
     public function charge(float $amount, string $accountNo, string $referenceId, string $invoiceId, string $description = 'Payment'): array
     {
         if (!$this->merchantUid || !$this->apiUserId || !$this->apiKey) {
-            return [
+            return $this->result([
                 'success' => false,
                 'transaction_id' => '',
+                'response_code' => 'NOT_CONFIGURED',
                 'message' => 'WaafiPay is not configured. Add its credentials to the backend environment.',
-            ];
+            ], $amount, $accountNo, $referenceId, $invoiceId);
         }
 
         // Format phone number
@@ -78,19 +81,21 @@ class WaafiPaymentService
                     'body' => $response->body(),
                 ]);
 
-                return [
+                return $this->result([
                     'success' => false,
                     'transaction_id' => '',
+                    'response_code' => 'HTTP_'.$response->status(),
                     'message' => 'WaafiPay is currently unavailable (HTTP '.$response->status().'). Please try again.',
-                ];
+                ], $amount, $accountNo, $referenceId, $invoiceId);
             }
 
             if (!is_array($data)) {
-                return [
+                return $this->result([
                     'success' => false,
                     'transaction_id' => '',
+                    'response_code' => 'INVALID_RESPONSE',
                     'message' => 'WaafiPay returned an invalid response. Please try again.',
-                ];
+                ], $amount, $accountNo, $referenceId, $invoiceId);
             }
 
             $responseCode = (string) ($data['responseCode'] ?? '');
@@ -102,11 +107,12 @@ class WaafiPaymentService
             );
 
             if ($responseCode === '2001') {
-                return [
+                return $this->result([
                     'success' => true,
                     'transaction_id' => $transactionId,
+                    'response_code' => $responseCode,
                     'message' => 'Payment successful.',
-                ];
+                ], $amount, $accountNo, $referenceId, $invoiceId);
             }
 
             Log::warning('WaafiPay payment rejected', [
@@ -115,19 +121,48 @@ class WaafiPaymentService
                 'reference_id' => $referenceId,
             ]);
 
-            return [
+            return $this->result([
                 'success' => false,
                 'transaction_id' => '',
+                'response_code' => $responseCode ?: 'REJECTED',
                 'message' => $data['responseMsg']
                     ?? $data['error']['message']
                     ?? 'Payment failed. No approval prompt was received; verify the mobile number and WaafiPay credentials.',
-            ];
+            ], $amount, $accountNo, $referenceId, $invoiceId);
         } catch (\Exception $e) {
-            return [
+            return $this->result([
                 'success' => false,
                 'transaction_id' => '',
+                'response_code' => 'GATEWAY_ERROR',
                 'message' => 'Payment gateway error: ' . $e->getMessage(),
-            ];
+            ], $amount, $accountNo, $referenceId, $invoiceId);
         }
+    }
+
+    private function result(array $result, float $amount, string $accountNo, string $referenceId, string $invoiceId): array
+    {
+        try {
+            if (Schema::hasTable('payment_gateway_logs')) {
+                $digits = preg_replace('/\D/', '', $accountNo);
+                PaymentGatewayLog::create([
+                    'gateway' => 'WaafiPay',
+                    'reference_id' => $referenceId,
+                    'invoice_id' => $invoiceId,
+                    'amount' => $amount,
+                    'account_masked' => strlen($digits) > 4
+                        ? str_repeat('*', strlen($digits) - 4).substr($digits, -4)
+                        : $digits,
+                    'status' => $result['success'] ? 'Successful' : 'Failed',
+                    'response_code' => $result['response_code'] ?? null,
+                    'transaction_id' => $result['transaction_id'] ?: null,
+                    'message' => $result['message'] ?? null,
+                    'created_by' => auth()->id(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Unable to save payment gateway log', ['message' => $e->getMessage()]);
+        }
+
+        return $result;
     }
 }

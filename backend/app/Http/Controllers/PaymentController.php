@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\PaymentGatewayLog;
 use App\Models\Receipt;
 use App\Services\AuditLogService;
 use App\Services\WaafiPaymentService;
@@ -24,6 +25,15 @@ class PaymentController extends Controller
     {
         $query = Payment::with(['patient', 'appointment']);
         return response()->json($query->paginate(15));
+    }
+
+    public function gatewayLogs(): JsonResponse
+    {
+        return response()->json(
+            PaymentGatewayLog::with('creator:id,full_name')
+                ->latest()
+                ->paginate(25)
+        );
     }
 
     public function store(Request $request): JsonResponse
