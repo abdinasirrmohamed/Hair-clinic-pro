@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class WaafiPaymentService
 {
@@ -62,21 +63,64 @@ class WaafiPaymentService
         ];
 
         try {
-            $response = Http::timeout(30)->post($this->endpoint, $payload);
+            $response = Http::asJson()
+                ->acceptJson()
+                ->connectTimeout(10)
+                ->timeout(45)
+                ->retry(2, 500)
+                ->post($this->endpoint, $payload);
             $data = $response->json();
 
-            if (isset($data['responseCode']) && $data['responseCode'] === '2001') {
+            if (!$response->successful()) {
+                Log::warning('WaafiPay HTTP request failed', [
+                    'status' => $response->status(),
+                    'reference_id' => $referenceId,
+                    'body' => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'transaction_id' => '',
+                    'message' => 'WaafiPay is currently unavailable (HTTP '.$response->status().'). Please try again.',
+                ];
+            }
+
+            if (!is_array($data)) {
+                return [
+                    'success' => false,
+                    'transaction_id' => '',
+                    'message' => 'WaafiPay returned an invalid response. Please try again.',
+                ];
+            }
+
+            $responseCode = (string) ($data['responseCode'] ?? '');
+            $transactionId = (string) (
+                $data['params']['transactionId']
+                ?? $data['params']['transactionInfo']['transactionId']
+                ?? $data['transactionId']
+                ?? ''
+            );
+
+            if ($responseCode === '2001') {
                 return [
                     'success' => true,
-                    'transaction_id' => $data['params']['transactionId'] ?? '',
+                    'transaction_id' => $transactionId,
                     'message' => 'Payment successful.',
                 ];
             }
 
+            Log::warning('WaafiPay payment rejected', [
+                'response_code' => $responseCode,
+                'response_message' => $data['responseMsg'] ?? null,
+                'reference_id' => $referenceId,
+            ]);
+
             return [
                 'success' => false,
                 'transaction_id' => '',
-                'message' => $data['responseMsg'] ?? 'Payment failed.',
+                'message' => $data['responseMsg']
+                    ?? $data['error']['message']
+                    ?? 'Payment failed. No approval prompt was received; verify the mobile number and WaafiPay credentials.',
             ];
         } catch (\Exception $e) {
             return [

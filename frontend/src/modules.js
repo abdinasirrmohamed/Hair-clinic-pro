@@ -29,7 +29,7 @@ export const modules = {
   doctors: {
     endpoint: '/doctors', columns: ['full_name', 'specialization', 'phone', 'consultation_fee', 'license_number', 'status'],
     labels: { full_name: 'Doctor', specialization: 'Specialization', phone: 'Phone', consultation_fee: 'Fee', license_number: 'License', status: 'Status' },
-    fields: [field('full_name', 'Full Name'), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
+    fields: [field('user_id', 'Doctor User Account', 'lookup', { lookup: 'doctor_users' }), field('full_name', 'Full Name'), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
   },
   patients: {
     endpoint: '/patients', columns: ['full_name', 'phone', 'email', 'gender', 'created_at'],
