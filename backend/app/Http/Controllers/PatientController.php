@@ -46,11 +46,12 @@ class PatientController extends Controller
             'gender' => ['required', Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
-            'date_of_birth' => 'nullable|date',
+            'date_of_birth' => 'nullable|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
             'address' => 'nullable|string',
             'medical_notes' => 'nullable|string',
             'assigned_doctor_id' => 'nullable|exists:doctors,id'
         ]);
+        $validated['age'] = $this->resolveAge($validated['date_of_birth'] ?? null, $validated['age'] ?? null);
 
         if (auth()->user()->role === 'Doctor') {
             $validated['assigned_doctor_id'] = auth()->user()->doctor?->id;
@@ -148,11 +149,17 @@ class PatientController extends Controller
             'gender' => [Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'email' => 'nullable|email',
-            'date_of_birth' => 'nullable|date',
+            'date_of_birth' => 'nullable|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
             'address' => 'nullable|string',
             'medical_notes' => 'nullable|string',
             'assigned_doctor_id' => 'nullable|exists:doctors,id'
         ]);
+        if ($request->exists('date_of_birth')) {
+            $validated['age'] = $this->resolveAge($validated['date_of_birth'] ?? null, null);
+        } elseif ($patient->date_of_birth) {
+            // Never accept a manually supplied age when a date of birth is already stored.
+            $validated['age'] = $this->resolveAge($patient->date_of_birth->toDateString(), null);
+        }
 
         $patient->update($validated);
         AuditLogService::log('Updated patient', 'Patients', $patient->id);
@@ -169,5 +176,12 @@ class PatientController extends Controller
         $patient->delete();
         AuditLogService::log('Deleted patient', 'Patients', $patient->id);
         return response()->json(null, 204);
+    }
+
+    private function resolveAge(?string $dateOfBirth, ?int $fallbackAge): ?int
+    {
+        return $dateOfBirth
+            ? Carbon::parse($dateOfBirth)->startOfDay()->age
+            : $fallbackAge;
     }
 }

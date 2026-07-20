@@ -10,6 +10,7 @@ use App\Services\WaafiPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PaymentController extends Controller
@@ -41,33 +42,56 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'appointment_id' => 'nullable|exists:appointments,id',
-            'amount' => 'required|numeric|min:0.01',
-            'payment_method' => ['required', Rule::in(['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'])],
+            'amount' => 'required|numeric|decimal:0,2|min:0.01|max:99999999.99',
+            'payment_method' => ['required', Rule::in(['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'])],
             'payment_status' => ['required', Rule::in(['Paid', 'Partial', 'Outstanding'])],
             'reference_number' => 'nullable|string',
-            'account_no' => 'required_if:payment_method,EVC Plus|required_if:payment_method,Sahal',
+            'account_no' => 'nullable|required_if:payment_method,EVC Plus|required_if:payment_method,Zaad|required_if:payment_method,Sahal|string|max:30',
             'notes' => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
-        try {
-            if (in_array($validated['payment_method'], ['EVC Plus', 'Sahal'])) {
-                $waafiResult = $this->waafi->charge(
-                    $validated['amount'], 
-                    $validated['account_no'], 
-                    'REF-' . time(), 
-                    'INV-' . time()
-                );
-                
-                if (!$waafiResult['success']) {
-                    throw new \Exception($waafiResult['message']);
-                }
-                
-                $validated['reference_number'] = $waafiResult['transaction_id'];
-                $validated['payment_status'] = 'Paid';
+        if ($validated['appointment_id'] ?? null) {
+            $belongsToPatient = \App\Models\Appointment::whereKey($validated['appointment_id'])
+                ->where('patient_id', $validated['patient_id'])
+                ->exists();
+            if (!$belongsToPatient) {
+                return response()->json(['message' => 'The selected appointment does not belong to this patient.'], 422);
+            }
+        }
+
+        $mobilePayment = in_array($validated['payment_method'], ['EVC Plus', 'Zaad', 'Sahal'], true);
+        if ($mobilePayment && $validated['payment_status'] !== 'Paid') {
+            return response()->json(['message' => 'Mobile wallet payments must be fully paid before they can be recorded.'], 422);
+        }
+
+        $referenceId = 'PAY-' . Str::uuid();
+        if ($mobilePayment) {
+            $waafiResult = $this->waafi->charge(
+                (float) $validated['amount'],
+                $validated['account_no'],
+                $referenceId,
+                'INV-' . Str::uuid(),
+                'Patient payment'
+            );
+
+            if (!$waafiResult['success']) {
+                return response()->json([
+                    'message' => $waafiResult['message'],
+                    'code' => $waafiResult['response_code'],
+                ], 422);
             }
 
+            $validated['reference_number'] = $waafiResult['transaction_id'] ?: $referenceId;
+        } elseif (empty($validated['reference_number'])) {
+            $validated['reference_number'] = $referenceId;
+        }
+
+        unset($validated['account_no']);
+
+        DB::beginTransaction();
+        try {
             $validated['created_by'] = auth()->id();
+            $validated['paid_at'] = in_array($validated['payment_status'], ['Paid', 'Partial'], true) ? now() : null;
             $payment = Payment::create($validated);
 
             Receipt::create([
@@ -78,10 +102,14 @@ class PaymentController extends Controller
             DB::commit();
             AuditLogService::log('Recorded payment', 'Payments', $payment->id);
 
-            return response()->json($payment, 201);
-        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Payment recorded successfully.',
+                'payment' => $payment->load(['patient', 'appointment', 'receipt']),
+            ], 201);
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error: ' . $e->getMessage()], 422);
+            report($e);
+            return response()->json(['message' => 'The payment could not be saved. No local transaction was recorded.'], 500);
         }
     }
 

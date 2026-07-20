@@ -25,6 +25,11 @@ class Payment extends Model
         'created_by',
     ];
 
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'paid_at' => 'datetime',
+    ];
+
     public function patient()
     {
         return $this->belongsTo(Patient::class, 'patient_id');

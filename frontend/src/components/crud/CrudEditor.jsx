@@ -5,6 +5,18 @@ import FormField from '../ui/FormField';
 import Alert from '../ui/Alert';
 import { Save } from 'lucide-react';
 
+const ageFromDateOfBirth = (dateOfBirth) => {
+  if (!dateOfBirth) return '';
+  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return '';
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const birthdayPassed = today.getMonth() > birthDate.getMonth()
+    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+  if (!birthdayPassed) age -= 1;
+  return age >= 0 ? age : '';
+};
+
 export default function CrudEditor({ config, record, lookups, onClose, onSaved }) {
   const editing = Boolean(record?.id);
   const [form,   setForm]   = useState({ ...(config.createDefaults ?? {}), ...(record ?? {}) });
@@ -21,7 +33,13 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
     if (selected && selected[0]) {
       setFiles((prev) => ({ ...prev, [name]: selected[0] }));
     } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
+      setForm((prev) => {
+        const next = { ...prev, [name]: value };
+        if (name === 'date_of_birth' && config.endpoint === '/patients') {
+          next.age = ageFromDateOfBirth(value);
+        }
+        return next;
+      });
     }
   };
 
@@ -51,7 +69,7 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
           await api.post(config.endpoint, form);
         }
       }
-      onSaved();
+      onSaved(editing ? 'Record updated successfully.' : 'Record created successfully.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,8 +83,6 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
       subtitle="Fill in the details and click Save to continue."
       onClose={onClose}
     >
-      {error && <div className="mb-4"><Alert message={error} /></div>}
-
       <form onSubmit={submit}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {fields.map((def) => (
@@ -79,6 +95,12 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
             />
           ))}
         </div>
+
+        {error && (
+          <div className="mt-4" role="alert" aria-live="assertive">
+            <Alert message={error} />
+          </div>
+        )}
 
         <div
           className="flex justify-end gap-3 mt-5 pt-4"

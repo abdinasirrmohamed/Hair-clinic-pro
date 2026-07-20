@@ -29,12 +29,12 @@ export const modules = {
   doctors: {
     endpoint: '/doctors', columns: ['full_name', 'specialization', 'phone', 'consultation_fee', 'license_number', 'status'],
     labels: { full_name: 'Doctor', specialization: 'Specialization', phone: 'Phone', consultation_fee: 'Fee', license_number: 'License', status: 'Status' },
-    fields: [field('user_id', 'Doctor User Account', 'lookup', { lookup: 'doctor_users' }), field('full_name', 'Full Name'), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number'), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number'), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
+    fields: [field('user_id', 'Doctor User Account', 'lookup', { lookup: 'doctor_users' }), field('full_name', 'Full Name'), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number', { min: 0 }), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number', { step: 1, min: 0, max: 80 }), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
   },
   patients: {
     endpoint: '/patients', columns: ['full_name', 'phone', 'email', 'gender', 'created_at'],
     labels: { full_name: 'Patient Name', phone: 'Phone', email: 'Email', gender: 'Gender', created_at: 'Registered' },
-    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female'] }), field('age', 'Age', 'number'), field('date_of_birth', 'Date of Birth', 'date'), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
+    fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female'] }), field('date_of_birth', 'Date of Birth', 'date', { max: new Date().toISOString().slice(0, 10) }), field('age', 'Age (calculated)', 'number', { step: 1, min: 0, max: 120, readOnly: true }), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
   },
   appointments: {
     endpoint: '/appointments', columns: ['patient.full_name', 'doctor.full_name', 'appointment_date', 'appointment_time', 'reason', 'status'],
@@ -55,7 +55,8 @@ export const modules = {
   payments: {
     endpoint: '/payments', noEdit: true, columns: ['patient.full_name', 'amount', 'payment_method', 'payment_status', 'reference_number', 'created_at'],
     labels: { 'patient.full_name': 'Patient', amount: 'Amount', payment_method: 'Method', payment_status: 'Status', reference_number: 'Reference', notes: 'Message', created_at: 'Date' },
-    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('appointment_id', 'Appointment', 'lookup', { lookup: 'appointments' }), field('amount', 'Amount', 'number'), field('payment_method', 'Payment Method', 'select', { options: ['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'] }), field('payment_status', 'Payment Status', 'select', { options: ['Paid', 'Partial', 'Outstanding'] }), field('reference_number', 'Reference Number'), field('account_no', 'Mobile Account'), field('notes', 'Message / Description', 'textarea')],
+    createDefaults: { payment_method: 'Cash', payment_status: 'Paid' },
+    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('appointment_id', 'Appointment', 'lookup', { lookup: 'appointments' }), field('amount', 'Amount', 'number', { min: 0.01, step: 0.01 }), field('payment_method', 'Payment Method', 'select', { options: ['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'] }), field('payment_status', 'Payment Status', 'select', { options: ['Paid', 'Partial', 'Outstanding'] }), field('reference_number', 'Reference Number'), field('account_no', 'Mobile Account'), field('notes', 'Message / Description', 'textarea')],
   },
   finance: {
     endpoint: '/expenses', payloadKey: 'expenses', columns: ['expense_date', 'category', 'vendor', 'description', 'amount'],

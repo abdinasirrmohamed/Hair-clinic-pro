@@ -29,6 +29,11 @@ class Doctor extends Model
         'status',
     ];
 
+    protected $casts = [
+        'experience_years' => 'integer',
+        'consultation_fee' => 'decimal:2',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

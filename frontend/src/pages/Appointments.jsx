@@ -51,6 +51,10 @@ export default function Appointments() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState({ text: '', type: 'info' });
+  const [bookingError, setBookingError] = useState('');
+  const [paymentFeedback, setPaymentFeedback] = useState({ text: '', type: 'info' });
+  const [bookingComplete, setBookingComplete] = useState(false);
+  const [completedPayment, setCompletedPayment] = useState(null);
   const [receipt, setReceipt] = useState(null);
 
   const doctors = lookups?.doctors ?? [];
@@ -112,7 +116,7 @@ export default function Appointments() {
         });
       })
       .catch((err) => {
-        if (!cancelled) setMessage({ text: err.message, type: 'danger' });
+        if (!cancelled) setBookingError(err.message);
       })
       .finally(() => {
         if (!cancelled) setSlotsLoading(false);
@@ -128,7 +132,14 @@ export default function Appointments() {
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    setMessage({ text: '', type: 'info' });
+    setBookingError('');
+    setBookingComplete(false);
+    setPaymentFeedback({
+      text: needsAccount
+        ? 'Payment request sent. Waiting for the customer to approve it on their phone...'
+        : 'Recording appointment and payment...',
+      type: 'info',
+    });
 
     try {
       const payload = {
@@ -137,17 +148,35 @@ export default function Appointments() {
       };
       const { data } = await api.post('/appointments/book', payload);
       setMessage({ text: 'Appointment booked, patient registered, and payment recorded successfully.', type: 'success' });
-      setReceipt(data.payment ?? null);
-      setForm(initialForm);
-      setBookingOpen(false);
+      setPaymentFeedback({
+        text: needsAccount
+          ? 'Payment approved successfully. The appointment and payment have been recorded.'
+          : 'Appointment and payment recorded successfully.',
+        type: 'success',
+      });
+      setBookingComplete(true);
+      setCompletedPayment(data.payment ?? null);
       await loadAppointments();
       await loadCalendar();
       await refresh();
     } catch (err) {
-      setMessage({ text: err.message, type: 'danger' });
+      setBookingError(err.message);
+      setPaymentFeedback({ text: err.message, type: 'danger' });
     } finally {
       setSaving(false);
     }
+  };
+
+  const closeBooking = () => {
+    if (bookingComplete && completedPayment) {
+      setReceipt(completedPayment);
+    }
+    setBookingOpen(false);
+    setBookingError('');
+    setPaymentFeedback({ text: '', type: 'info' });
+    setBookingComplete(false);
+    setCompletedPayment(null);
+    setForm(initialForm);
   };
 
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -190,7 +219,13 @@ export default function Appointments() {
               <Search size={15} />
             </div>
             <button
-              onClick={() => setBookingOpen(true)}
+              onClick={() => {
+                setBookingError('');
+                setPaymentFeedback({ text: '', type: 'info' });
+                setBookingComplete(false);
+                setCompletedPayment(null);
+                setBookingOpen(true);
+              }}
               className="inline-flex items-center gap-2 rounded-full border border-[#b7cdf8] bg-white px-4 py-2 text-xs font-semibold text-[#3b73d9] shadow-[0_8px_22px_rgba(65,111,190,0.12)]"
             >
               <Plus size={14} />
@@ -326,7 +361,7 @@ export default function Appointments() {
         <Modal
           title="New Appointment"
           subtitle="Register patient, choose an available doctor slot, and record payment."
-          onClose={() => setBookingOpen(false)}
+          onClose={closeBooking}
           size="xl"
         >
           <form onSubmit={submit}>
@@ -414,6 +449,12 @@ export default function Appointments() {
               </label>
             </div>
 
+            {paymentFeedback.text && (
+              <div className="mt-4" role="status" aria-live="assertive">
+                <Alert message={paymentFeedback.text} variant={paymentFeedback.type} />
+              </div>
+            )}
+
             {workingHours && (
               <div className="mt-4 rounded-lg border border-[#edf1f7] bg-[#fbfcff] p-3 text-xs text-[#667085]">
                 Working hours: <strong className="text-[#1f2937]">{workingHours.start} - {workingHours.end}</strong>
@@ -423,15 +464,25 @@ export default function Appointments() {
               </div>
             )}
 
-            <div className="mt-6 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-full bg-[#3b72cf] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                <Save size={14} />
-                {saving ? 'Saving...' : 'Save Appointment'}
-              </button>
+            <div className="mt-6 flex justify-end gap-3">
+              {bookingComplete ? (
+                <button
+                  type="button"
+                  onClick={closeBooking}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white"
+                >
+                  Done
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#3b72cf] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  <Save size={14} />
+                  {saving ? 'Waiting for payment...' : 'Save Appointment'}
+                </button>
+              )}
             </div>
           </form>
         </Modal>

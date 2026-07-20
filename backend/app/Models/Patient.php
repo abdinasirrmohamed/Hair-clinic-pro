@@ -25,6 +25,11 @@ class Patient extends Model
         'assigned_doctor_id',
     ];
 
+    protected $casts = [
+        'age' => 'integer',
+        'date_of_birth' => 'date:Y-m-d',
+    ];
+
     public function appointments()
     {
         return $this->hasMany(Appointment::class, 'patient_id');

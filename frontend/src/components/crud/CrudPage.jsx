@@ -15,6 +15,7 @@ export default function CrudPage({
   const [search,  setSearch]  = useState('');
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState('');
   const [editor,  setEditor]  = useState(undefined);
 
   const load = useCallback(async (q = '') => {
@@ -57,9 +58,10 @@ export default function CrudPage({
     }
   };
 
-  const handleSaved = async () => {
+  const handleSaved = async (message) => {
     setEditor(undefined);
     await load();
+    setSuccess(message);
     onDataChanged?.();
   };
 
@@ -114,6 +116,7 @@ export default function CrudPage({
       )}
 
       {error && <Alert message={error} />}
+      {success && <Alert message={success} variant="success" />}
 
       {/* Table card */}
       <div

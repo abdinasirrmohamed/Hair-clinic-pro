@@ -31,6 +31,9 @@ export default function FormField({ definition, value, onChange, lookups }) {
     style: inputStyle,
     onFocus: addFocus,
     onBlur: remFocus,
+    required: definition.required,
+    disabled: definition.disabled,
+    readOnly: definition.readOnly,
   };
 
   let input;
@@ -84,7 +87,9 @@ export default function FormField({ definition, value, onChange, lookups }) {
         type={definition.type ?? 'text'}
         value={value ?? ''}
         onChange={onChange}
-        step={definition.type === 'number' ? '0.01' : undefined}
+        step={definition.step ?? (definition.type === 'number' ? '0.01' : undefined)}
+        min={definition.min}
+        max={definition.max}
       />
     );
   }

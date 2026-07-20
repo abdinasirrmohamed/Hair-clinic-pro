@@ -78,7 +78,7 @@ class WaafiPaymentTest extends TestCase
             'reference_id' => 'REF-TEST-2',
             'status' => 'Failed',
             'response_code' => '5310',
-            'message' => 'Insufficient balance',
+            'message' => 'The mobile account has insufficient balance. Ask the customer to add funds or use another payment method.',
         ]);
     }
 

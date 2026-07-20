@@ -49,7 +49,7 @@ class DoctorController extends Controller
             'consultation_fee' => 'nullable|numeric|min:0',
             'email' => 'nullable|email',
             'license_number' => 'required|string|unique:doctors',
-            'experience_years' => 'integer|min:0',
+            'experience_years' => 'required|integer|min:0|max:80',
             'bio' => 'nullable|string',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
             'user_id' => [
@@ -130,7 +130,7 @@ class DoctorController extends Controller
             'consultation_fee' => 'nullable|numeric|min:0',
             'email' => 'nullable|email',
             'license_number' => ['string', Rule::unique('doctors')->ignore($doctor->id)],
-            'experience_years' => 'integer|min:0',
+            'experience_years' => 'sometimes|required|integer|min:0|max:80',
             'bio' => 'nullable|string',
             'status' => [Rule::in(['Active', 'Inactive'])],
             'user_id' => 'nullable|exists:users,id',
