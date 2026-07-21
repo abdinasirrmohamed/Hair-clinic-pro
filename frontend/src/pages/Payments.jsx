@@ -43,7 +43,7 @@ export default function Payments() {
             title="Receipt"
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'var(--clr-muted)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#7c3aed'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
           >
             <ReceiptText size={14} />
@@ -53,7 +53,7 @@ export default function Payments() {
       <section className="rounded-xl overflow-hidden mt-5" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--clr-border)' }}>
           <div className="flex items-center gap-2">
-            <History size={16} className="text-green-500" />
+            <History size={16} className="text-violet-600" />
             <div>
               <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>WaafiPay Gateway History</h2>
               <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>Successful and failed mobile payment attempts.</p>
@@ -80,7 +80,7 @@ export default function Payments() {
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--clr-text)' }}>{row.reference_id}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--clr-muted)' }}>{row.account_masked}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--clr-text)' }}>${row.amount}</td>
-                  <td className="px-4 py-3"><span style={{ color: row.status === 'Successful' ? '#22c55e' : '#f87171' }}>{row.status}</span></td>
+                  <td className="px-4 py-3"><span style={{ color: row.status === 'Successful' ? '#7c3aed' : '#f87171' }}>{row.status}</span></td>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--clr-muted)' }}>{row.response_code || '—'}</td>
                   <td className="px-4 py-3 max-w-xs" style={{ color: 'var(--clr-muted)' }}>{row.message}</td>
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--clr-muted)' }}>{row.creator?.full_name || 'System'}</td>

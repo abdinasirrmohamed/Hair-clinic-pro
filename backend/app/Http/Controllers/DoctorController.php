@@ -42,7 +42,7 @@ class DoctorController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'full_name' => 'required|string',
+            'full_name' => 'nullable|string',
             'specialization' => ['required', Rule::in($this->specializations)],
             'qualification' => ['nullable', Rule::in($this->qualifications)],
             'phone' => 'required|string',
@@ -53,11 +53,13 @@ class DoctorController extends Controller
             'bio' => 'nullable|string',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
             'user_id' => [
-                'nullable',
+                'required',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'Doctor')),
             ],
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072'
         ]);
+
+        $validated['full_name'] = User::findOrFail($validated['user_id'])->full_name;
 
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('doctors', 'public');
@@ -136,6 +138,10 @@ class DoctorController extends Controller
             'user_id' => 'nullable|exists:users,id',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072'
         ]);
+
+        if (!empty($validated['user_id'])) {
+            $validated['full_name'] = User::findOrFail($validated['user_id'])->full_name;
+        }
 
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('doctors', 'public');

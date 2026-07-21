@@ -98,7 +98,7 @@ export default function Laboratory() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
         <form onSubmit={saveTest} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
           <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-            <FlaskConical size={16} className="text-green-500" />
+            <FlaskConical size={16} className="text-violet-600" />
             <h2 className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>Add Lab Service / Test</h2>
           </div>
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -113,7 +113,7 @@ export default function Laboratory() {
             <textarea value={testForm.description} onChange={(e) => setTestForm({ ...testForm, description: e.target.value })} placeholder="Description" rows={2} className="md:col-span-2 rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
           </div>
           <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
-            <button disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#22c55e', color: '#052e10' }}>
+            <button disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#7c3aed', color: '#ffffff' }}>
               <Plus size={14} /> Save Lab Service
             </button>
           </div>
@@ -121,7 +121,7 @@ export default function Laboratory() {
 
         <form onSubmit={saveRequest} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
           <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-            <FlaskConical size={16} className="text-green-500" />
+            <FlaskConical size={16} className="text-violet-600" />
             <h2 className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>New Patient Lab Request</h2>
           </div>
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -147,10 +147,10 @@ export default function Laboratory() {
             </select>
             <textarea value={requestForm.notes} onChange={(e) => setRequestForm({ ...requestForm, notes: e.target.value })} placeholder="Notes" rows={2} className="md:col-span-2 rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
             <textarea value={requestForm.result} onChange={(e) => setRequestForm({ ...requestForm, result: e.target.value })} placeholder="Result / findings" rows={2} className="md:col-span-2 rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
-            {selectedTest && <p className="md:col-span-2 text-xs text-green-500 font-semibold">Selected price: {money(selectedTest.price)}</p>}
+            {selectedTest && <p className="md:col-span-2 text-xs text-violet-600 font-semibold">Selected price: {money(selectedTest.price)}</p>}
           </div>
           <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
-            <button disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#22c55e', color: '#052e10' }}>
+            <button disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#7c3aed', color: '#ffffff' }}>
               <Plus size={14} /> Create Request
             </button>
           </div>

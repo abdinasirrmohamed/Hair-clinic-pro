@@ -1,3 +1,5 @@
+import PasswordInput from './PasswordInput';
+
 export default function FormField({ definition, value, onChange, lookups }) {
   if (definition.type === 'hidden') return null;
 
@@ -15,8 +17,8 @@ export default function FormField({ definition, value, onChange, lookups }) {
   };
 
   const focusStyle = {
-    borderColor: '#22c55e',
-    boxShadow: '0 0 0 3px rgba(34,197,94,.15)',
+    borderColor: '#7c3aed',
+    boxShadow: '0 0 0 3px rgba(124,58,237,.15)',
   };
 
   const addFocus = (e) => Object.assign(e.target.style, focusStyle);
@@ -80,6 +82,8 @@ export default function FormField({ definition, value, onChange, lookups }) {
         ))}
       </select>
     );
+  } else if (definition.type === 'password') {
+    input = <PasswordInput {...common} value={value ?? ''} onChange={onChange} />;
   } else {
     input = (
       <input

@@ -14,11 +14,14 @@ class DoctorSchedule extends Model
     protected $fillable = [
         'doctor_id',
         'day_of_week',
+        'shift',
         'start_time',
         'end_time',
         'slot_minutes',
         'is_working',
     ];
+
+    protected $casts = ['is_working' => 'boolean', 'slot_minutes' => 'integer'];
 
     public function doctor()
     {

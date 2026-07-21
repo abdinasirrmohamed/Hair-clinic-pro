@@ -26,6 +26,8 @@ class PharmacySale extends Model
         'tax_percent',
         'tax_amount',
         'total_amount',
+        'amount_paid',
+        'remaining_balance',
         'payment_method',
         'payment_status',
         'status',
@@ -33,6 +35,13 @@ class PharmacySale extends Model
         'return_reason',
         'notes',
         'created_by',
+    ];
+
+    protected $casts = [
+        'subtotal' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'remaining_balance' => 'decimal:2',
     ];
 
     public function patient()

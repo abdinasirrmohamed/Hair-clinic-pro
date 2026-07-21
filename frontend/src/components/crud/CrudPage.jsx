@@ -8,7 +8,7 @@ import { Plus, RefreshCw, Search } from 'lucide-react';
 import { money } from '../../utils/formatters';
 
 export default function CrudPage({
-  title, subtitle, config, lookups, onDataChanged, renderActions,
+  title, subtitle, config, lookups, onDataChanged, onRecordSaved, renderActions,
 }) {
   const [rows,    setRows]    = useState([]);
   const [summary, setSummary] = useState(null);
@@ -58,18 +58,19 @@ export default function CrudPage({
     }
   };
 
-  const handleSaved = async (message) => {
+  const handleSaved = async (message, savedRecord, created) => {
     setEditor(undefined);
     await load();
     setSuccess(message);
     onDataChanged?.();
+    onRecordSaved?.(savedRecord, created);
   };
 
   /* Reusable inline button style */
   const btnStyle = {
     display: 'inline-flex', alignItems: 'center', gap: '.375rem',
     padding: '.5rem 1rem', borderRadius: '.625rem',
-    background: '#22c55e', color: '#052e10',
+    background: '#7c3aed', color: '#ffffff',
     fontWeight: 600, fontSize: '.8125rem', cursor: 'pointer',
     border: 'none', whiteSpace: 'nowrap',
     transition: 'background .15s, transform .1s',
@@ -88,8 +89,8 @@ export default function CrudPage({
         <button
           onClick={() => setEditor(null)}
           style={btnStyle}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#16a34a'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#22c55e'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#6d28d9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
         >
           <Plus size={14} />
           Add New
@@ -100,9 +101,9 @@ export default function CrudPage({
       {summary && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            ['Revenue',    summary.total_revenue,  'var(--clr-accent-soft)', '#22c55e'],
+            ['Revenue',    summary.total_revenue,  'var(--clr-accent-soft)', '#7c3aed'],
             ['Expenses',   summary.total_expenses, 'rgba(248,113,113,.1)',   '#f87171'],
-            ['Net Profit', summary.net_profit,     'rgba(34,197,94,.06)',    '#22c55e'],
+            ['Net Profit', summary.net_profit,     'rgba(124,58,237,.06)',    '#7c3aed'],
           ].map(([label, val, bg, color]) => (
             <div key={label}
               className="p-4 rounded-xl border"
@@ -147,7 +148,7 @@ export default function CrudPage({
                   border: '1px solid var(--clr-search-border)',
                   color: 'var(--clr-text)',
                 }}
-                onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,197,94,.12)'; }}
+                onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,.12)'; }}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--clr-search-border)'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
@@ -156,7 +157,7 @@ export default function CrudPage({
               title="Refresh"
               className="p-2 rounded-lg transition-colors"
               style={{ color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.borderColor = '#22c55e44'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#7c3aed'; e.currentTarget.style.borderColor = '#7c3aed44'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.borderColor = 'var(--clr-border)'; }}
             >
               <RefreshCw size={14} />

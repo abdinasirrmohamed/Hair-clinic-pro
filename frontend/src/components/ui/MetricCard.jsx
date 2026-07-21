@@ -15,19 +15,19 @@ export default function MetricCard({ label, value, icon: Icon, index = 0 }) {
         {/* Green icon badge */}
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center"
-          style={{ background: 'var(--clr-accent-soft)', border: '1px solid rgba(34,197,94,.2)' }}
+          style={{ background: 'var(--clr-accent-soft)', border: '1px solid rgba(124,58,237,.2)' }}
         >
           {Icon ? (
-            <Icon size={18} className="text-green-500" />
+            <Icon size={18} className="text-violet-600" />
           ) : (
-            <TrendingUp size={18} className="text-green-500" />
+            <TrendingUp size={18} className="text-violet-600" />
           )}
         </div>
 
         {/* Live dot */}
         <span
           className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--clr-accent-soft)', color: '#22c55e' }}
+          style={{ background: 'var(--clr-accent-soft)', color: '#7c3aed' }}
         >
           <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
           Live

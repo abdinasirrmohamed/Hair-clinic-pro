@@ -168,7 +168,7 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--clr-text)' }}>Dashboard</h1>
           <p className="mt-1 text-xs" style={{ color: 'var(--clr-muted)' }}>
             Welcome back,{' '}
-            <span style={{ color: '#22c55e' }}>{user?.full_name}</span>
+            <span style={{ color: '#7c3aed' }}>{user?.full_name}</span>
             . Here's your overview.
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function Dashboard() {
             color: 'var(--clr-muted)',
           }}
         >
-          <Calendar size={13} className="text-green-500" />
+          <Calendar size={13} className="text-violet-600" />
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                  <span className="text-[#052e10] text-xs font-bold">{initials(patient.full_name)}</span>
+                  <span className="text-[#ffffff] text-xs font-bold">{initials(patient.full_name)}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--clr-text)' }}>
@@ -256,22 +256,22 @@ export default function Dashboard() {
           className="lg:col-span-2 rounded-xl p-6 relative overflow-hidden"
           style={{
             background: '#111912',
-            border: '1px solid rgba(34,197,94,.2)',
+            border: '1px solid rgba(124,58,237,.2)',
           }}
         >
           {/* Glow */}
           <div
             className="absolute top-0 right-0 w-40 h-40 pointer-events-none"
             style={{
-              background: 'radial-gradient(circle at top right, rgba(34,197,94,.12), transparent 70%)',
+              background: 'radial-gradient(circle at top right, rgba(124,58,237,.12), transparent 70%)',
             }}
           />
           <div className="relative">
             <div
               className="w-10 h-10 rounded-xl mb-4 flex items-center justify-center"
-              style={{ background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.2)' }}
+              style={{ background: 'rgba(124,58,237,.12)', border: '1px solid rgba(124,58,237,.2)' }}
             >
-              <Activity size={18} className="text-green-500" />
+              <Activity size={18} className="text-violet-600" />
             </div>
             <h2 className="text-base font-bold text-white">System Access</h2>
             <p className="mt-2 text-xs leading-relaxed" style={{ color: '#6b8f6e' }}>
@@ -285,13 +285,13 @@ export default function Dashboard() {
             </p>
             <div className="mt-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-green-500 font-medium">System Online</span>
+              <span className="text-xs text-violet-600 font-medium">System Online</span>
             </div>
 
             {/* Green bar indicator */}
             <div
               className="mt-4 h-1 rounded-full"
-              style={{ background: 'rgba(34,197,94,.12)' }}
+              style={{ background: 'rgba(124,58,237,.12)' }}
             >
               <div
                 className="h-full rounded-full bg-green-500 transition-all duration-1000"

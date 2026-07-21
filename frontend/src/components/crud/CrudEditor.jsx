@@ -50,6 +50,7 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
     try {
       const hasFiles = Object.keys(files).length > 0;
       let body;
+      let response;
       if (hasFiles) {
         body = new FormData();
         Object.entries(form).forEach(([k, v]) => {
@@ -57,19 +58,19 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
         });
         Object.entries(files).forEach(([k, v]) => body.append(k, v));
         if (editing) body.append('_method', 'PUT');
-        await api.post(
+        response = await api.post(
           editing ? `${config.endpoint}/${record.id}` : config.endpoint,
           body,
           { headers: { 'Content-Type': 'multipart/form-data' } },
         );
       } else {
         if (editing) {
-          await api.put(`${config.endpoint}/${record.id}`, form);
+          response = await api.put(`${config.endpoint}/${record.id}`, form);
         } else {
-          await api.post(config.endpoint, form);
+          response = await api.post(config.endpoint, form);
         }
       }
-      onSaved(editing ? 'Record updated successfully.' : 'Record created successfully.');
+      onSaved(editing ? 'Record updated successfully.' : 'Record created successfully.', response?.data, !editing);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -124,9 +125,9 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
             type="submit"
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: '#22c55e', color: '#052e10', border: 'none' }}
-            onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#16a34a'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#22c55e'; }}
+            style={{ background: '#7c3aed', color: '#ffffff', border: 'none' }}
+            onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#6d28d9'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
           >
             <Save size={14} />
             {saving ? 'Saving…' : 'Save Record'}

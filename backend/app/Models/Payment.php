@@ -17,6 +17,9 @@ class Payment extends Model
         'patient_id',
         'appointment_id',
         'amount',
+        'total_amount',
+        'paid_amount',
+        'remaining_amount',
         'payment_method',
         'payment_status',
         'paid_at',
@@ -27,6 +30,9 @@ class Payment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
+        'remaining_amount' => 'decimal:2',
         'paid_at' => 'datetime',
     ];
 

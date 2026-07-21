@@ -66,11 +66,13 @@ class PharmacySaleController extends Controller
             'discount_type' => ['required', Rule::in(['None', 'Fixed', 'Percentage'])],
             'discount_value' => 'numeric|min:0',
             'tax_percent' => 'numeric|min:0',
+            'amount_paid' => 'nullable|numeric|decimal:0,2|min:0',
             'notes' => 'nullable|string',
             'account_no' => 'required_if:payment_method,EVC Plus|required_if:payment_method,Zaad|required_if:payment_method,Sahal',
             'medicines' => 'required|array|min:1',
-            'medicines.*.medicine_id' => 'required|exists:medicines,id',
+            'medicines.*.medicine_id' => 'required|distinct|exists:medicines,id',
             'medicines.*.quantity' => 'required|integer|min:1',
+            'medicines.*.prescription_medicine_id' => 'nullable|exists:prescription_medicines,id',
         ]);
 
         DB::beginTransaction();
@@ -92,6 +94,7 @@ class PharmacySaleController extends Controller
 
                 $saleMedicinesData[] = [
                     'medicine_id' => $medicine->id,
+                    'prescription_medicine_id' => $medInput['prescription_medicine_id'] ?? null,
                     'quantity' => $medInput['quantity'],
                     'unit_price' => $medicine->unit_price,
                     'subtotal' => $lineTotal,
@@ -113,11 +116,35 @@ class PharmacySaleController extends Controller
             $taxAmount = $afterDiscount * ($validated['tax_percent'] / 100);
             
             $totalAmount = $afterDiscount + $taxAmount;
+            $amountPaid = array_key_exists('amount_paid', $validated)
+                ? round((float) $validated['amount_paid'], 2)
+                : round((float) $totalAmount, 2);
+            if ($amountPaid <= 0 || $amountPaid > $totalAmount) {
+                throw new \Exception('Amount paid must be greater than zero and cannot exceed the sale total.');
+            }
+            $remainingBalance = round($totalAmount - $amountPaid, 2);
+
+            $prescription = null;
+            if (!empty($validated['prescription_id'])) {
+                $prescription = Prescription::with('medicines')->lockForUpdate()->findOrFail($validated['prescription_id']);
+                if (!$validated['patient_id'] || $prescription->patient_id !== (int) $validated['patient_id']) {
+                    throw new \Exception('The selected prescription does not belong to this patient.');
+                }
+                foreach ($validated['medicines'] as $line) {
+                    $rxLine = $prescription->medicines->firstWhere('id', $line['prescription_medicine_id'] ?? 0);
+                    if (!$rxLine || $rxLine->medicine_id !== (int) $line['medicine_id']) {
+                        throw new \Exception('A sale medicine does not belong to the selected prescription.');
+                    }
+                    if ($rxLine->dispensed_quantity + (int) $line['quantity'] > $rxLine->quantity) {
+                        throw new \Exception('Dispensed quantity cannot exceed the prescribed quantity.');
+                    }
+                }
+            }
 
             // Handle Mobile Payment via Waafi
             if (in_array($validated['payment_method'], ['EVC Plus', 'Zaad', 'Sahal'])) {
                 $waafiResult = $this->waafi->charge(
-                    $totalAmount, 
+                    $amountPaid,
                     $validated['account_no'], 
                     'PHR-' . uniqid(), 
                     'INV-' . uniqid(),
@@ -143,9 +170,11 @@ class PharmacySaleController extends Controller
                 'tax_percent' => $validated['tax_percent'],
                 'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
+                'amount_paid' => $amountPaid,
+                'remaining_balance' => $remainingBalance,
                 'payment_method' => $validated['payment_method'],
-                'payment_status' => 'Paid',
-                'status' => 'Paid',
+                'payment_status' => $remainingBalance > 0 ? 'Partial Paid' : 'Full Paid',
+                'status' => $remainingBalance > 0 ? 'Partial Paid' : 'Paid',
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => auth()->id(),
             ]);
@@ -155,7 +184,10 @@ class PharmacySaleController extends Controller
                 PharmacySaleMedicine::create([
                     'sale_id' => $sale->id,
                     'medicine_id' => $data['medicine_id'],
+                    'prescription_medicine_id' => $data['prescription_medicine_id'],
                     'quantity' => $data['quantity'],
+                    'frequency' => $prescription?->medicines->firstWhere('medicine_id', $data['medicine_id'])?->frequency,
+                    'instructions' => $prescription?->medicines->firstWhere('medicine_id', $data['medicine_id'])?->instructions,
                     'unit_price' => $data['unit_price'],
                     'subtotal' => $data['subtotal'],
                 ]);
@@ -177,13 +209,21 @@ class PharmacySaleController extends Controller
             }
 
             if (!empty($validated['prescription_id'])) {
-                Prescription::where('id', $validated['prescription_id'])->update(['status' => 'Dispensed']);
+                foreach ($validated['medicines'] as $line) {
+                    $prescription->medicines->firstWhere('id', $line['prescription_medicine_id'])
+                        ->increment('dispensed_quantity', (int) $line['quantity']);
+                }
+                $prescription->refresh()->load('medicines');
+                $fullyDispensed = $prescription->medicines->every(
+                    fn ($item) => $item->dispensed_quantity >= $item->quantity
+                );
+                $prescription->update(['status' => $fullyDispensed ? 'Dispensed' : 'Partially Dispensed']);
             }
 
             DB::commit();
             AuditLogService::log('Created pharmacy sale', 'Pharmacy', $sale->id);
 
-            return response()->json($sale, 201);
+            return response()->json($sale->load(['medicines.medicine', 'patient', 'prescription.doctor']), 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error processing sale: ' . $e->getMessage()], 422);
@@ -192,13 +232,13 @@ class PharmacySaleController extends Controller
 
     public function show(PharmacySale $sale): JsonResponse
     {
-        $sale->load(['medicines.medicine', 'patient', 'creator']);
+        $sale->load(['medicines.medicine', 'patient', 'creator', 'prescription.doctor']);
         return response()->json($sale);
     }
 
     public function receipt(PharmacySale $sale): JsonResponse
     {
-        $sale->load(['medicines.medicine', 'patient']);
+        $sale->load(['medicines.medicine', 'patient', 'prescription.doctor']);
         return response()->json($sale);
     }
 

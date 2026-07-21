@@ -87,7 +87,7 @@ export default function Settings() {
 
       <form onSubmit={submit} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <SettingsIcon size={16} className="text-green-500" />
+          <SettingsIcon size={16} className="text-violet-600" />
           <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>System Settings</h2>
         </div>
         <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -104,7 +104,7 @@ export default function Settings() {
           ))}
         </div>
         <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
-          <button disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ background: '#22c55e', color: '#052e10', border: 'none' }}>
+          <button disabled={saving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ background: '#7c3aed', color: '#ffffff', border: 'none' }}>
             <Save size={14} />
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -114,13 +114,13 @@ export default function Settings() {
       <form onSubmit={testWaafi} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid var(--clr-border)' }}>
           <div className="flex items-center gap-2">
-            <CreditCard size={16} className="text-green-500" />
+            <CreditCard size={16} className="text-violet-600" />
             <div>
               <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>WaafiPay Test</h2>
               <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>Sends a real test charge; maximum $1.</p>
             </div>
           </div>
-          <span className="px-2 py-1 rounded-full text-xs font-bold" style={{ color: waafi?.configured ? '#22c55e' : '#f87171', background: waafi?.configured ? '#22c55e18' : '#f8717118' }}>
+          <span className="px-2 py-1 rounded-full text-xs font-bold" style={{ color: waafi?.configured ? '#7c3aed' : '#f87171', background: waafi?.configured ? '#7c3aed18' : '#f8717118' }}>
             {waafi?.configured ? 'Configured' : 'Not configured'}
           </span>
         </div>
@@ -138,7 +138,7 @@ export default function Settings() {
           </p>
         </div>
         <div className="px-5 py-4 flex justify-end" style={{ borderTop: '1px solid var(--clr-border)' }}>
-          <button disabled={testing || !waafi?.configured} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ background: '#22c55e', color: '#052e10', border: 'none' }}>
+          <button disabled={testing || !waafi?.configured} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50" style={{ background: '#7c3aed', color: '#ffffff', border: 'none' }}>
             <CreditCard size={14} />
             {testing ? 'Testing...' : 'Send Test Charge'}
           </button>

@@ -43,7 +43,7 @@ export default function Patients() {
             title="Patient timeline"
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'var(--clr-muted)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#7c3aed'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
           >
             <Clock size={14} />
@@ -67,13 +67,13 @@ export default function Patients() {
               <div key={index} className="rounded-lg p-3" style={{ background: 'var(--clr-search-bg)', border: '1px solid var(--clr-border)' }}>
                 <div className="flex justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-green-500">{event.type}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-violet-600">{event.type}</p>
                     <h3 className="text-sm font-bold mt-1" style={{ color: 'var(--clr-text)' }}>{event.title}</h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--clr-muted)' }}>{event.description}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>{event.date}</p>
-                    {event.amount !== null && <p className="text-sm font-bold text-green-500 mt-1">{money(event.amount)}</p>}
+                    {event.amount !== null && <p className="text-sm font-bold text-violet-600 mt-1">{money(event.amount)}</p>}
                   </div>
                 </div>
               </div>

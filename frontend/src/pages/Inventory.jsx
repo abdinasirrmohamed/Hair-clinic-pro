@@ -65,7 +65,7 @@ export default function Inventory() {
     color: 'var(--clr-text)', fontSize: '.875rem', outline: 'none', fontFamily: 'inherit',
     transition: 'border-color .15s, box-shadow .15s',
   };
-  const focusStyle = { borderColor: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,.12)' };
+  const focusStyle = { borderColor: '#7c3aed', boxShadow: '0 0 0 3px rgba(124,58,237,.12)' };
   const labelClass = 'block text-[10px] font-semibold uppercase tracking-widest mb-1.5';
 
   return (
@@ -87,7 +87,7 @@ export default function Inventory() {
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{
               background: tab === key ? 'var(--clr-card)' : 'transparent',
-              color: tab === key ? '#22c55e' : 'var(--clr-muted)',
+              color: tab === key ? '#7c3aed' : 'var(--clr-muted)',
               border: 'none', cursor: 'pointer',
               boxShadow: tab === key ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
             }}
@@ -117,9 +117,9 @@ export default function Inventory() {
             <div className="flex items-center gap-2 mb-5">
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: 'var(--clr-accent-soft)', border: '1px solid rgba(34,197,94,.2)' }}
+                style={{ background: 'var(--clr-accent-soft)', border: '1px solid rgba(124,58,237,.2)' }}
               >
-                <Archive size={13} className="text-green-500" />
+                <Archive size={13} className="text-violet-600" />
               </div>
               <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Record Movement</h2>
             </div>
@@ -145,9 +145,9 @@ export default function Inventory() {
                         onClick={() => setMove({ ...move, movement_type: key })}
                         className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all"
                         style={{
-                          border: `2px solid ${active ? '#22c55e' : 'var(--clr-border)'}`,
+                          border: `2px solid ${active ? '#7c3aed' : 'var(--clr-border)'}`,
                           background: active ? 'var(--clr-accent-soft)' : 'transparent',
-                          color: active ? '#22c55e' : 'var(--clr-muted)',
+                          color: active ? '#7c3aed' : 'var(--clr-muted)',
                           cursor: 'pointer',
                         }}
                       >
@@ -210,9 +210,9 @@ export default function Inventory() {
 
               <button type="submit" disabled={saving}
                 className="w-full py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
-                style={{ background: '#22c55e', color: '#052e10', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
-                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#16a34a'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#22c55e'; }}
+                style={{ background: '#7c3aed', color: '#ffffff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
+                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#6d28d9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
               >
                 {saving ? 'Saving…' : 'Save Movement'}
               </button>

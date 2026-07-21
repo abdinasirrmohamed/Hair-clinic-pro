@@ -92,7 +92,7 @@ export default function Topbar({ onMenuToggle }) {
           title={dark ? 'Switch to light' : 'Switch to dark'}
           className="p-2 rounded-lg transition-colors"
           style={{ color: 'var(--clr-muted)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--clr-hover)'; e.currentTarget.style.color = '#22c55e'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--clr-hover)'; e.currentTarget.style.color = '#7c3aed'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--clr-muted)'; }}
         >
           {dark ? <Sun size={16} /> : <Moon size={16} />}
@@ -107,7 +107,7 @@ export default function Topbar({ onMenuToggle }) {
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
         >
           <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-violet-600" />
         </button>
 
         {/* Divider */}
@@ -124,11 +124,11 @@ export default function Topbar({ onMenuToggle }) {
             </p>
             <p className="text-[10px]" style={{ color: 'var(--clr-section)' }}>{user?.role}</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center ring-2 ring-transparent group-hover:ring-green-500/40 transition-all overflow-hidden">
+          <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center ring-2 ring-transparent group-hover:ring-violet-500/40 transition-all overflow-hidden">
             {avatarUrl ? (
               <img src={avatarUrl} alt={user?.full_name ?? 'Profile'} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-[#052e10] text-xs font-bold">{initials(user?.full_name)}</span>
+              <span className="text-[#ffffff] text-xs font-bold">{initials(user?.full_name)}</span>
             )}
           </div>
         </button>

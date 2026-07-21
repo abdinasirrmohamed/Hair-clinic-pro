@@ -23,6 +23,8 @@ function pharmacyRows(receipt) {
     <tr>
       <td>${item.medicine?.medicine_name ?? 'Medicine'}</td>
       <td>${item.quantity}</td>
+      <td>${item.frequency ?? '-'}</td>
+      <td>${item.instructions ?? '-'}</td>
       <td>${money(item.unit_price)}</td>
       <td>${money(item.subtotal)}</td>
     </tr>
@@ -31,14 +33,18 @@ function pharmacyRows(receipt) {
   return `
     ${line('Sale No', receipt.sale_number)}
     ${line('Customer', receipt.customer_name || receipt.patient?.full_name)}
+    ${line('Prescription', receipt.prescription?.prescription_number)}
+    ${line('Doctor', receipt.prescription?.doctor?.full_name)}
     ${line('Subtotal', money(receipt.subtotal))}
     ${line('Discount', money(receipt.discount_amount))}
     ${line('Tax', money(receipt.tax_amount))}
     ${line('Total', money(receipt.total_amount))}
+    ${line('Amount Paid', money(receipt.amount_paid))}
+    ${line('Remaining Balance', money(receipt.remaining_balance))}
     ${line('Method', receipt.payment_method)}
     ${line('Status', receipt.payment_status)}
     ${line('Date', receipt.created_at)}
-    ${itemRows ? `<tr><td colspan="2"><table class="items"><thead><tr><th>Medicine</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${itemRows}</tbody></table></td></tr>` : ''}
+    ${itemRows ? `<tr><td colspan="2"><table class="items"><thead><tr><th>Medicine</th><th>Qty</th><th>Frequency</th><th>Instructions</th><th>Price</th><th>Total</th></tr></thead><tbody>${itemRows}</tbody></table></td></tr>` : ''}
   `;
 }
 
@@ -64,7 +70,7 @@ function printReceipt(type, receipt) {
           .items { margin-top: 12px; }
           .items td, .items th { padding: 8px; border: 1px solid #e5e7eb; }
           .items td:last-child { text-align: left; }
-          .total { font-size: 18px; color: #16a34a; }
+          .total { font-size: 18px; color: #6d28d9; }
           @media print { body { padding: 0; } }
         </style>
       </head>
@@ -110,6 +116,10 @@ export default function ReceiptModal({ type = 'payment', receipt, onClose }) {
             ['Customer', customer],
             ['Payment Method', receipt.payment_method],
             ['Payment Status', receipt.payment_status],
+            ['Prescription', receipt.prescription?.prescription_number],
+            ['Doctor', receipt.prescription?.doctor?.full_name],
+            ['Amount Paid', isPharmacy ? money(receipt.amount_paid) : money(receipt.paid_amount)],
+            ['Remaining Balance', isPharmacy ? money(receipt.remaining_balance) : money(receipt.remaining_amount)],
             ['Reference', receipt.reference_number],
             ['Date', receipt.created_at],
           ].filter(([, value]) => value).map(([label, value]) => (
@@ -123,8 +133,8 @@ export default function ReceiptModal({ type = 'payment', receipt, onClose }) {
             <div className="pt-2 space-y-2">
               {(receipt.medicines ?? []).map((item) => (
                 <div key={item.id} className="flex justify-between gap-3 text-sm">
-                  <span style={{ color: 'var(--clr-text)' }}>{item.medicine?.medicine_name}</span>
-                  <span className="font-semibold text-green-500">{item.quantity} x {money(item.unit_price)}</span>
+                  <span style={{ color: 'var(--clr-text)' }}>{item.medicine?.medicine_name}<small className="block" style={{ color: 'var(--clr-muted)' }}>{item.frequency} · {item.instructions}</small></span>
+                  <span className="font-semibold text-violet-600">{item.quantity} x {money(item.unit_price)}</span>
                 </div>
               ))}
             </div>
@@ -132,7 +142,7 @@ export default function ReceiptModal({ type = 'payment', receipt, onClose }) {
 
           <div className="flex justify-between items-center pt-4 mt-4" style={{ borderTop: '1px solid var(--clr-border)' }}>
             <span className="text-sm font-semibold" style={{ color: 'var(--clr-muted)' }}>Total</span>
-            <span className="text-2xl font-bold text-green-500">{money(total)}</span>
+            <span className="text-2xl font-bold text-violet-600">{money(total)}</span>
           </div>
         </div>
 
@@ -140,7 +150,7 @@ export default function ReceiptModal({ type = 'payment', receipt, onClose }) {
           <button
             onClick={() => printReceipt(type, receipt)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold"
-            style={{ background: '#22c55e', color: '#052e10' }}
+            style={{ background: '#7c3aed', color: '#ffffff' }}
           >
             <Printer size={15} />
             Print

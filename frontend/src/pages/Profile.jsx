@@ -3,6 +3,7 @@ import { Camera, Lock, Save, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import Alert from '../components/ui/Alert';
+import PasswordInput from '../components/ui/PasswordInput';
 import { initials } from '../utils/formatters';
 
 export default function Profile() {
@@ -64,7 +65,7 @@ export default function Profile() {
     fontFamily: 'inherit',
     transition: 'border-color .15s, box-shadow .15s',
   };
-  const focusStyle = { borderColor: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,.12)' };
+  const focusStyle = { borderColor: '#7c3aed', boxShadow: '0 0 0 3px rgba(124,58,237,.12)' };
   const labelClass = 'block text-[10px] font-semibold uppercase tracking-widest mb-1.5';
 
   return (
@@ -82,11 +83,11 @@ export default function Profile() {
       >
         <div
           className="h-20 relative"
-          style={{ background: 'linear-gradient(135deg, #0d1410 0%, #111912 50%, rgba(34,197,94,.08) 100%)', borderBottom: '1px solid var(--clr-border)' }}
+          style={{ background: 'linear-gradient(135deg, #0d1410 0%, #111912 50%, rgba(124,58,237,.08) 100%)', borderBottom: '1px solid var(--clr-border)' }}
         >
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse at right, rgba(34,197,94,.1), transparent 60%)' }}
+            style={{ background: 'radial-gradient(ellipse at right, rgba(124,58,237,.1), transparent 60%)' }}
           />
           <div className="absolute -bottom-7 left-6">
             <div
@@ -96,7 +97,7 @@ export default function Profile() {
               {previewUrl ? (
                 <img src={previewUrl} alt={user?.full_name ?? 'Profile'} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[#052e10] text-lg font-bold">{initials(user?.full_name)}</span>
+                <span className="text-[#ffffff] text-lg font-bold">{initials(user?.full_name)}</span>
               )}
             </div>
           </div>
@@ -148,8 +149,7 @@ export default function Profile() {
               <label className={labelClass} style={{ color: 'var(--clr-section)' }}>
                 <span className="flex items-center gap-1.5"><Lock size={10} /> Current Password</span>
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 style={inputStyle}
                 value={form.old_password}
                 onChange={(e) => setForm({ ...form, old_password: e.target.value })}
@@ -162,8 +162,7 @@ export default function Profile() {
               <label className={labelClass} style={{ color: 'var(--clr-section)' }}>
                 <span className="flex items-center gap-1.5"><Lock size={10} /> New Password</span>
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 style={inputStyle}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -179,9 +178,9 @@ export default function Profile() {
               type="submit"
               disabled={saving}
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-              style={{ background: '#22c55e', color: '#052e10', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
-              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#16a34a'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#22c55e'; }}
+              style={{ background: '#7c3aed', color: '#ffffff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}
+              onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#6d28d9'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
             >
               <Save size={14} />
               {saving ? 'Saving...' : 'Save Changes'}

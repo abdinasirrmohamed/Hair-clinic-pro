@@ -14,7 +14,7 @@ const iconMap = {
 const colorMap = {
   danger: '#ef4444',
   warning: '#f59e0b',
-  info: '#22c55e',
+  info: '#7c3aed',
 };
 
 export default function Notifications() {
@@ -58,7 +58,7 @@ export default function Notifications() {
           )}
           {data.items.map((item, index) => {
             const Icon = iconMap[item.module] ?? AlertTriangle;
-            const color = colorMap[item.severity] ?? '#22c55e';
+            const color = colorMap[item.severity] ?? '#7c3aed';
             return (
               <div key={`${item.type}-${index}`} className="rounded-xl p-4" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
                 <div className="flex items-start gap-3">

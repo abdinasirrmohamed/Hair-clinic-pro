@@ -42,7 +42,7 @@ const isExpired = (medicine) => medicine.expiry_date && new Date(medicine.expiry
 const isLow = (medicine) => Number(medicine.quantity) <= Number(medicine.reorder_level ?? 0);
 
 function StatCard({ label, value, tone = 'green' }) {
-  const color = tone === 'red' ? '#f87171' : tone === 'amber' ? '#f59e0b' : '#22c55e';
+  const color = tone === 'red' ? '#f87171' : tone === 'amber' ? '#f59e0b' : '#7c3aed';
   return (
     <div className="rounded-xl p-4" style={{ background: 'var(--clr-card)', border: `1px solid ${color}33` }}>
       <p className="text-xs font-semibold" style={{ color }}>{label}</p>
@@ -190,7 +190,7 @@ function MedicineForm({ initial, onClose, onSaved }) {
           />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ color: 'var(--clr-muted)' }}>Cancel</button>
-            <button disabled={saving} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#22c55e', color: '#052e10' }}>
+            <button disabled={saving} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#7c3aed', color: '#ffffff' }}>
               {saving ? 'Saving...' : 'Save Medicine'}
             </button>
           </div>
@@ -314,7 +314,7 @@ export default function Pharmacy() {
   const lowStock = useMemo(() => medicines.filter(isLow), [medicines]);
   const expired = useMemo(() => medicines.filter(isExpired), [medicines]);
   const todaySales = useMemo(() => sales.filter((s) => String(s.created_at ?? '').slice(0, 10) === today), [sales, today]);
-  const pendingRx = prescriptions.filter((p) => p.status === 'Pending');
+  const pendingRx = prescriptions.filter((p) => ['Pending', 'Partially Dispensed'].includes(p.status));
   const completedRx = prescriptions.filter((p) => ['Dispensed', 'Completed'].includes(p.status));
 
   const subtotal = cart.reduce((sum, item) => sum + Number(item.unit_price) * Number(item.quantity), 0);
@@ -397,7 +397,7 @@ export default function Pharmacy() {
         discount_type: discountType,
         discount_value: Number(discountValue || 0),
         tax_percent: Number(taxPercent || 0),
-        medicines: cart.map(({ medicine_id, quantity }) => ({ medicine_id, quantity })),
+        medicines: cart.map(({ medicine_id, quantity, prescription_medicine_id }) => ({ medicine_id, quantity, prescription_medicine_id })),
         notes,
       });
       const loaded = await api.get(`/pharmacy/sales/${data.id}`);
@@ -440,13 +440,33 @@ export default function Pharmacy() {
     setCustomerName(prescription.patient?.full_name ?? '');
     setCart((prescription.medicines ?? []).map((item) => ({
       medicine_id: item.medicine_id,
+      prescription_medicine_id: item.id,
       medicine_name: item.medicine?.medicine_name ?? 'Medicine',
       barcode: item.medicine?.barcode,
       unit_price: Number(item.medicine?.unit_price) || 0,
-      quantity: Number(item.quantity) || 1,
+      quantity: Math.max(0, Number(item.quantity) - Number(item.dispensed_quantity || 0)),
       stock: Number(item.medicine?.quantity) || 0,
-    })));
+      frequency: item.frequency,
+      instructions: item.instructions,
+    })).filter((item) => item.quantity > 0));
     goSection('pos');
+  };
+
+  const selectPosPatient = (value) => {
+    setPatientId(value);
+    setPrescriptionContext(null);
+    setCart([]);
+    const patient = (lookups?.patients ?? []).find((item) => String(item.id) === String(value));
+    setCustomerName(patient?.full_name ?? '');
+    if (!value) return;
+
+    const prescription = pendingRx.find((item) => String(item.patient_id) === String(value));
+    if (prescription) {
+      proceedPrescriptionPayment(prescription);
+      setMessage(`Loaded ${prescription.medicines?.length ?? 0} prescribed medicine(s) for ${patient?.full_name ?? 'the selected patient'}.`);
+    } else {
+      setMessage('No pending prescription was found for the selected patient.');
+    }
   };
 
   const deleteMedicine = async (medicine) => {
@@ -490,7 +510,7 @@ export default function Pharmacy() {
             <div key={label} className="rounded-xl p-4" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
               <p className="text-xs font-semibold" style={{ color: 'var(--clr-muted)' }}>{label}</p>
               <div className="mt-4 h-3 rounded-full overflow-hidden" style={{ background: 'var(--clr-hover)' }}>
-                <div className="h-full rounded-full" style={{ width: `${Math.max(8, (value / max) * 100)}%`, background: '#22c55e' }} />
+                <div className="h-full rounded-full" style={{ width: `${Math.max(8, (value / max) * 100)}%`, background: '#7c3aed' }} />
               </div>
               <p className="mt-2 text-lg font-bold" style={{ color: 'var(--clr-text)' }}>{label.includes('Revenue') ? money(value) : value}</p>
             </div>
@@ -580,7 +600,7 @@ export default function Pharmacy() {
                       {medicine.barcode || 'No barcode'} - {medicine.quantity} in stock
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-green-500">{money(medicine.unit_price)}</span>
+                  <span className="text-sm font-bold text-violet-600">{money(medicine.unit_price)}</span>
                 </button>
               ))}
             </div>
@@ -615,9 +635,11 @@ export default function Pharmacy() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate" style={{ color: 'var(--clr-text)' }}>{item.medicine_name}</p>
                       {item.barcode && <p className="text-[11px] font-mono" style={{ color: 'var(--clr-muted)' }}>{item.barcode}</p>}
+                      {item.frequency && <p className="text-[11px]" style={{ color: 'var(--clr-muted)' }}>Frequency: {item.frequency}</p>}
+                      {item.instructions && <p className="text-[11px]" style={{ color: 'var(--clr-muted)' }}>{item.instructions}</p>}
                     </div>
                     <span className="text-sm" style={{ color: item.quantity > item.stock ? '#f87171' : 'var(--clr-muted)' }}>{item.stock}</span>
-                    <span className="text-sm font-semibold text-green-500">{money(item.unit_price)}</span>
+                    <span className="text-sm font-semibold text-violet-600">{money(item.unit_price)}</span>
                     <div className="flex items-center gap-1">
                       <IconButton icon={Minus} title="Decrease" onClick={() => setCart((prev) => prev.map((i) => i.medicine_id === item.medicine_id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i))} />
                       <input
@@ -639,10 +661,30 @@ export default function Pharmacy() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
-              <select value={patientId} onChange={(e) => setPatientId(e.target.value)} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
+              <select value={patientId} onChange={(e) => selectPosPatient(e.target.value)} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
                 <option value="">Walk-in / no patient</option>
                 {(lookups?.patients ?? []).map((p) => <option key={p.id} value={p.id}>{p.full_name} - {p.phone}</option>)}
               </select>
+              {patientId && (
+                <select
+                  value={prescriptionContext?.id ?? ''}
+                  onChange={async (e) => {
+                    const prescription = pendingRx.find((item) => String(item.id) === e.target.value);
+                    if (prescription) {
+                      const { data } = await api.get(`/prescriptions/${prescription.id}`);
+                      setSelectedPrescription(data);
+                      proceedPrescriptionPayment(data);
+                    }
+                  }}
+                  className="rounded-lg px-3 py-2 text-sm outline-none"
+                  style={inputStyle()}
+                >
+                  <option value="">Load patient prescription</option>
+                  {pendingRx.filter((item) => String(item.patient_id) === String(patientId)).map((item) => (
+                    <option key={item.id} value={item.id}>{item.prescription_number} · {item.medicines_count ?? item.medicines?.length ?? 0} medicines</option>
+                  ))}
+                </select>
+              )}
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
                 {['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer', 'Mixed Payment'].map((method) => <option key={method}>{method}</option>)}
               </select>
@@ -693,7 +735,7 @@ export default function Pharmacy() {
           <Table
             columns={['Prescription', 'Patient', 'Doctor', 'Date', 'Items', 'Status', 'Action']}
             rows={visiblePrescriptions.map((p) => [
-              <span key="rx" className="font-mono text-xs text-green-500">{p.prescription_number}</span>,
+              <span key="rx" className="font-mono text-xs text-violet-600">{p.prescription_number}</span>,
               <div key="patient">
                 <p className="font-semibold">{p.patient?.full_name || '-'}</p>
                 <p className="text-[11px]" style={{ color: 'var(--clr-muted)' }}>{p.patient?.phone || ''}</p>
@@ -715,7 +757,7 @@ export default function Pharmacy() {
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-mono text-xs text-green-500">{selectedPrescription.prescription_number}</p>
+                    <p className="font-mono text-xs text-violet-600">{selectedPrescription.prescription_number}</p>
                     <h3 className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>{selectedPrescription.patient?.full_name || '-'}</h3>
                     <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>
                       {selectedPrescription.doctor?.full_name || '-'} - {selectedPrescription.prescription_date || '-'}
@@ -745,9 +787,10 @@ export default function Pharmacy() {
                               Qty {qty} - Stock {stock} {unavailable ? '- unavailable or low stock' : ''}
                             </p>
                             {item.instructions && <p className="mt-1 text-xs" style={{ color: 'var(--clr-muted)' }}>{item.instructions}</p>}
+                            {item.frequency && <p className="mt-1 text-xs" style={{ color: 'var(--clr-muted)' }}>Frequency: {item.frequency}</p>}
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-green-500">{money(price * qty)}</p>
+                            <p className="text-sm font-bold text-violet-600">{money(price * qty)}</p>
                             <p className="text-[11px]" style={{ color: 'var(--clr-muted)' }}>{money(price)} each</p>
                           </div>
                         </div>
@@ -885,7 +928,7 @@ function Card({ title, children }) {
 
 function ActionButton({ onClick, icon: Icon, label, muted = false }) {
   return (
-    <button onClick={onClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors" style={{ background: muted ? 'var(--clr-search-bg)' : '#22c55e', color: muted ? 'var(--clr-text)' : '#052e10', border: muted ? '1px solid var(--clr-border)' : 'none' }}>
+    <button onClick={onClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors" style={{ background: muted ? 'var(--clr-search-bg)' : '#7c3aed', color: muted ? 'var(--clr-text)' : '#ffffff', border: muted ? '1px solid var(--clr-border)' : 'none' }}>
       <Icon size={15} />
       {label}
     </button>
@@ -901,7 +944,7 @@ function IconButton({ icon: Icon, title, onClick, danger = false }) {
 }
 
 function Status({ label, tone }) {
-  const color = tone === 'red' ? '#f87171' : tone === 'amber' ? '#f59e0b' : '#22c55e';
+  const color = tone === 'red' ? '#f87171' : tone === 'amber' ? '#f59e0b' : '#7c3aed';
   return <span className="inline-flex px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: `${color}18`, color }}>{label}</span>;
 }
 
@@ -949,7 +992,7 @@ function SummaryLine({ label, value, strong = false }) {
   return (
     <div className="flex justify-between text-sm">
       <span style={{ color: 'var(--clr-muted)' }}>{label}</span>
-      <span className={strong ? 'text-xl font-bold text-green-500' : 'font-semibold'} style={strong ? undefined : { color: 'var(--clr-text)' }}>{value}</span>
+      <span className={strong ? 'text-xl font-bold text-violet-600' : 'font-semibold'} style={strong ? undefined : { color: 'var(--clr-text)' }}>{value}</span>
     </div>
   );
 }

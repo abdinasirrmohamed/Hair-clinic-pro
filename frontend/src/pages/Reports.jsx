@@ -208,7 +208,7 @@ export default function Reports() {
     border: 'none',
     transition: 'all .15s',
     background: active ? 'var(--clr-card)' : 'transparent',
-    color: active ? '#22c55e' : 'var(--clr-muted)',
+    color: active ? '#7c3aed' : 'var(--clr-muted)',
     boxShadow: active ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
   });
 
@@ -234,14 +234,14 @@ export default function Reports() {
       <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Filter size={15} className="text-green-500" />
+            <Filter size={15} className="text-violet-600" />
             <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Report Filters</h2>
           </div>
           <div className="flex gap-2">
             <button onClick={resetFilters} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold" style={{ color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}>
               <RotateCcw size={13} /> Reset
             </button>
-            <button onClick={exportCsv} disabled={exporting} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-60" style={{ background: 'var(--clr-accent-soft)', color: '#22c55e', border: '1px solid rgba(34,197,94,.2)' }}>
+            <button onClick={exportCsv} disabled={exporting} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-60" style={{ background: 'var(--clr-accent-soft)', color: '#7c3aed', border: '1px solid rgba(124,58,237,.2)' }}>
               <Download size={13} /> {exporting ? 'Exporting...' : 'Export CSV'}
             </button>
           </div>
@@ -384,7 +384,7 @@ export default function Reports() {
               {apptByStatus.length > 0 && (
                 <div className="rounded-xl p-6" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
                   <div className="flex items-center gap-2 mb-6">
-                    <BarChart2 size={16} className="text-green-500" />
+                    <BarChart2 size={16} className="text-violet-600" />
                     <h2 className="text-sm font-semibold" style={{ color: 'var(--clr-text)' }}>Appointment Status Breakdown</h2>
                   </div>
                   <div className="space-y-4">
@@ -392,7 +392,7 @@ export default function Reports() {
                       <div key={row.status} className="flex items-center gap-4">
                         <span className="w-24 text-xs font-medium text-right shrink-0" style={{ color: 'var(--clr-muted)' }}>{row.status}</span>
                         <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--clr-hover)' }}>
-                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (row.total / maxTotal) * 100)}%`, background: '#22c55e' }} />
+                          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (row.total / maxTotal) * 100)}%`, background: '#7c3aed' }} />
                         </div>
                         <span className="w-7 text-sm font-bold shrink-0" style={{ color: 'var(--clr-text)' }}>{row.total}</span>
                       </div>
@@ -556,7 +556,7 @@ export default function Reports() {
 
           {data?.range && (
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--clr-muted)' }}>
-              <Calendar size={12} className="text-green-500" />
+              <Calendar size={12} className="text-violet-600" />
               Showing from <strong style={{ color: 'var(--clr-text)' }}>{data.range.from}</strong> to <strong style={{ color: 'var(--clr-text)' }}>{data.range.to}</strong>
             </div>
           )}

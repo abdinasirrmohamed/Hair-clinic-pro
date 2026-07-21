@@ -87,7 +87,7 @@ export default function DataTable({
                           title="Edit"
                           className="p-2 rounded-lg transition-colors"
                           style={{ color: 'var(--clr-muted)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#7c3aed'; e.currentTarget.style.background = 'var(--clr-accent-soft)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--clr-muted)'; e.currentTarget.style.background = 'transparent'; }}
                         >
                           <Pencil size={14} />

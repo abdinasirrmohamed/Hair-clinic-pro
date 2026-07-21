@@ -30,16 +30,16 @@ export default function Login() {
     width: '100%',
     padding: '.75rem 1rem .75rem 2.5rem',
     borderRadius: '.75rem',
-    border: '1px solid rgba(34,197,94,.2)',
-    background: 'rgba(34,197,94,.04)',
+    border: '1px solid rgba(124,58,237,.2)',
+    background: 'rgba(124,58,237,.04)',
     color: '#e8f4ea',
     fontSize: '.875rem',
     outline: 'none',
     fontFamily: 'inherit',
     transition: 'border-color .15s, box-shadow .15s',
-    caretColor: '#22c55e',
+    caretColor: '#7c3aed',
   };
-  const focusStyle = { borderColor: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,.15)' };
+  const focusStyle = { borderColor: '#7c3aed', boxShadow: '0 0 0 3px rgba(124,58,237,.15)' };
 
   return (
     <div
@@ -51,14 +51,14 @@ export default function Login() {
         className="absolute w-96 h-96 rounded-full pointer-events-none"
         style={{
           top: '-8rem', right: '-8rem',
-          background: 'radial-gradient(circle, rgba(34,197,94,.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(124,58,237,.08) 0%, transparent 70%)',
         }}
       />
       <div
         className="absolute w-96 h-96 rounded-full pointer-events-none"
         style={{
           bottom: '-8rem', left: '-8rem',
-          background: 'radial-gradient(circle, rgba(34,197,94,.06) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(124,58,237,.06) 0%, transparent 70%)',
         }}
       />
 
@@ -68,14 +68,14 @@ export default function Login() {
           className="rounded-2xl p-8"
           style={{
             background: '#0d1410',
-            border: '1px solid rgba(34,197,94,.15)',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,197,94,.08)',
+            border: '1px solid rgba(124,58,237,.15)',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,.08)',
           }}
         >
           {/* Brand */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-              <Activity size={20} className="text-[#052e10]" />
+              <Activity size={20} className="text-[#ffffff]" />
             </div>
             <div>
               <p className="text-base font-bold text-white">Hair Clinic Pro</p>
@@ -110,7 +110,7 @@ export default function Login() {
                   placeholder="Enter username"
                   style={inputStyle}
                   onFocus={(e) => Object.assign(e.target.style, focusStyle)}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(34,197,94,.2)'; e.target.style.boxShadow = 'none'; }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(124,58,237,.2)'; e.target.style.boxShadow = 'none'; }}
                 />
               </div>
             </div>
@@ -133,14 +133,14 @@ export default function Login() {
                   placeholder="Enter password"
                   style={{ ...inputStyle, paddingRight: '2.75rem' }}
                   onFocus={(e) => Object.assign(e.target.style, focusStyle)}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(34,197,94,.2)'; e.target.style.boxShadow = 'none'; }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(124,58,237,.2)'; e.target.style.boxShadow = 'none'; }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
                   style={{ color: '#6b8f6e', background: 'none', border: 'none', cursor: 'pointer' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#22c55e'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#7c3aed'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = '#6b8f6e'; }}
                 >
                   {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -154,20 +154,20 @@ export default function Login() {
               disabled={busy}
               className="w-full py-3 rounded-xl text-sm font-bold transition-all mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: '#22c55e',
-                color: '#052e10',
+                background: '#7c3aed',
+                color: '#ffffff',
                 border: 'none',
-                boxShadow: '0 4px 20px rgba(34,197,94,.3)',
+                boxShadow: '0 4px 20px rgba(124,58,237,.3)',
                 cursor: busy ? 'not-allowed' : 'pointer',
               }}
-              onMouseEnter={(e) => { if (!busy) e.currentTarget.style.background = '#16a34a'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#22c55e'; }}
+              onMouseEnter={(e) => { if (!busy) e.currentTarget.style.background = '#6d28d9'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
             >
               {busy ? (
                 <span className="flex items-center justify-center gap-2">
                   <span
                     className="w-4 h-4 rounded-full animate-spin"
-                    style={{ border: '2px solid rgba(5,46,16,.3)', borderTopColor: '#052e10' }}
+                    style={{ border: '2px solid rgba(5,46,16,.3)', borderTopColor: '#ffffff' }}
                   />
                   Signing in…
                 </span>

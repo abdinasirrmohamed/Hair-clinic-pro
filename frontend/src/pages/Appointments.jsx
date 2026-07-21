@@ -10,6 +10,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import { initials, money } from '../utils/formatters';
 
 const initialForm = {
+  patient_id: '',
   patient_name: '',
   patient_phone: '',
   gender: 'Male',
@@ -19,13 +20,14 @@ const initialForm = {
   appointment_date: '',
   appointment_time: '',
   payment_method: 'Cash',
-  payment_status: 'Paid',
+  payment_status: 'Full Paid',
+  paid_amount: '',
   account_no: '',
   payment_notes: '',
 };
 
 const paymentMethods = ['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'];
-const paymentStatuses = ['Paid', 'Partial', 'Outstanding'];
+const paymentStatuses = ['Full Paid', 'Partial Paid'];
 const mobileMethods = ['EVC Plus', 'Zaad', 'Sahal'];
 
 function ReceptionStat({ value, label, tone = '#2563eb' }) {
@@ -46,6 +48,7 @@ export default function Appointments() {
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [slots, setSlots] = useState([]);
   const [workingHours, setWorkingHours] = useState(null);
+  const [doctorSchedules, setDoctorSchedules] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -94,6 +97,16 @@ export default function Appointments() {
   useEffect(() => { loadCalendar(); }, [loadCalendar]);
 
   useEffect(() => {
+    if (!form.doctor_id) {
+      setDoctorSchedules([]);
+      return;
+    }
+    api.get(`/appointments/doctors/${form.doctor_id}/schedules`)
+      .then(({ data }) => setDoctorSchedules((data.schedules ?? []).filter((row) => row.is_working)))
+      .catch((err) => setBookingError(err.message));
+  }, [form.doctor_id]);
+
+  useEffect(() => {
     if (!form.doctor_id || !form.appointment_date) {
       setSlots([]);
       setWorkingHours(null);
@@ -126,7 +139,21 @@ export default function Appointments() {
   }, [form.doctor_id, form.appointment_date]);
 
   const setField = (name, value) => {
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => {
+      if (name === 'patient_id') {
+        const patient = (lookups?.patients ?? []).find((item) => String(item.id) === String(value));
+        return {
+          ...current,
+          patient_id: value,
+          patient_name: patient?.full_name ?? '',
+          patient_phone: patient?.phone ?? '',
+          gender: patient?.gender ?? 'Male',
+          age: patient?.age ?? '',
+          address: patient?.address ?? '',
+        };
+      }
+      return { ...current, [name]: value };
+    });
   };
 
   const submit = async (event) => {
@@ -184,7 +211,7 @@ export default function Appointments() {
     const today = rows.filter((row) => row.appointment_date === todayKey).length;
     const pending = rows.filter((row) => row.status === 'Pending').length;
     const completed = rows.filter((row) => row.status === 'Completed').length;
-    const paid = rows.filter((row) => row.payment?.payment_status === 'Paid').length;
+    const paid = rows.filter((row) => row.payment?.payment_status === 'Full Paid').length;
     return { total: rows.length, today, pending, completed, paid };
   }, [rows, todayKey]);
 
@@ -201,7 +228,20 @@ export default function Appointments() {
   }, [query, rows]);
 
   const upcomingCards = calendarRows.slice(0, 6);
-  const needsAccount = mobileMethods.includes(form.payment_method) && form.payment_status === 'Paid';
+  const needsAccount = mobileMethods.includes(form.payment_method);
+  const isPartial = form.payment_status === 'Partial Paid';
+  const appointmentTotal = Number(selectedDoctor?.consultation_fee ?? 0);
+  const appointmentPaid = isPartial ? Number(form.paid_amount || 0) : appointmentTotal;
+  const remainingBalance = Math.max(0, appointmentTotal - appointmentPaid);
+  const availableDates = useMemo(() => {
+    const workingDays = new Set(doctorSchedules.map((row) => row.day_of_week));
+    return Array.from({ length: 60 }, (_, offset) => {
+      const date = new Date();
+      date.setDate(date.getDate() + offset);
+      const value = date.toISOString().slice(0, 10);
+      return { value, label: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }), day: date.toLocaleDateString('en-US', { weekday: 'long' }) };
+    }).filter((item) => workingDays.has(item.day));
+  }, [doctorSchedules]);
 
   const fieldClass = 'w-full rounded-lg border border-[#edf1f7] bg-white px-3 py-2.5 text-sm text-[#1f2937] outline-none focus:border-[#7aa7ff]';
   const labelClass = 'block text-[10px] font-semibold uppercase tracking-widest text-[#8993a4] mb-1.5';
@@ -238,7 +278,7 @@ export default function Appointments() {
 
         <div className="mt-7 rounded-sm bg-white px-4 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.055)]">
           <div className="grid grid-cols-2 gap-5 md:grid-cols-5">
-            <ReceptionStat value={stats.total} label="Total Appointments" tone="#3b72cf" />
+            <ReceptionStat value={stats.total} label="Total Appointments" tone="var(--clr-accent)" />
             <ReceptionStat value={stats.today} label="Today" tone="#14a59a" />
             <ReceptionStat value={stats.pending} label="Pending" tone="#c34b7a" />
             <ReceptionStat value={stats.completed} label="Completed" tone="#aa2f2f" />
@@ -273,8 +313,11 @@ export default function Appointments() {
                   <th className="px-4 py-3">Doctor</th>
                   <th className="px-4 py-3">Appointment Date</th>
                   <th className="px-4 py-3">Time</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Total</th>
+                  <th className="px-4 py-3">Paid</th>
+                  <th className="px-4 py-3">Remaining</th>
+                  <th className="px-4 py-3">Payment</th>
+                  <th className="px-4 py-3">Appointment</th>
                   <th className="px-4 py-3 text-right">Receipt</th>
                 </tr>
               </thead>
@@ -295,7 +338,10 @@ export default function Appointments() {
                     <td className="px-4 py-3">{row.doctor?.full_name ?? '-'}</td>
                     <td className="px-4 py-3">{row.appointment_date}</td>
                     <td className="px-4 py-3">{String(row.appointment_time ?? '').slice(0, 5)}</td>
-                    <td className="px-4 py-3">{money(row.fee_at_booking)}</td>
+                    <td className="px-4 py-3">{money(row.payment?.total_amount ?? row.fee_at_booking)}</td>
+                    <td className="px-4 py-3">{money(row.payment?.paid_amount ?? 0)}</td>
+                    <td className="px-4 py-3 font-semibold" style={{ color: Number(row.payment?.remaining_amount) > 0 ? '#d97706' : '#16a34a' }}>{money(row.payment?.remaining_amount ?? 0)}</td>
+                    <td className="px-4 py-3"><StatusBadge value={row.payment?.payment_status ?? 'Outstanding'} /></td>
                     <td className="px-4 py-3"><StatusBadge value={row.status} /></td>
                     <td className="px-4 py-3 text-right">
                       {row.payment ? (
@@ -314,7 +360,7 @@ export default function Appointments() {
                 ))}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="px-4 py-10 text-center text-sm text-[#8a94a6]">
+                    <td colSpan="10" className="px-4 py-10 text-center text-sm text-[#8a94a6]">
                       No appointments found.
                     </td>
                   </tr>
@@ -342,7 +388,7 @@ export default function Appointments() {
               {upcomingCards.map((item) => (
                 <div key={item.id} className="rounded-lg border border-[#edf1f7] bg-[#fbfcff] p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold text-[#3b72cf]">{item.date} at {item.time}</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--clr-accent)' }}>{item.date} at {item.time}</p>
                     <StatusBadge value={item.payment_status ?? 'Outstanding'} />
                   </div>
                   <p className="mt-2 text-sm font-semibold text-[#1f2937]">{item.patient}</p>
@@ -367,27 +413,30 @@ export default function Appointments() {
           <form onSubmit={submit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <label>
-                <span className={labelClass}>Patient Name</span>
-                <input className={fieldClass} value={form.patient_name} onChange={(e) => setField('patient_name', e.target.value)} required />
+                <span className={labelClass}>Patient</span>
+                <select className={fieldClass} value={form.patient_id} onChange={(e) => setField('patient_id', e.target.value)} required>
+                  <option value="">Select patient</option>
+                  {(lookups?.patients ?? []).map((patient) => <option key={patient.id} value={patient.id}>{patient.full_name} · {patient.phone}</option>)}
+                </select>
               </label>
               <label>
                 <span className={labelClass}>Patient Phone</span>
-                <input className={fieldClass} value={form.patient_phone} onChange={(e) => setField('patient_phone', e.target.value)} required />
+                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.patient_phone} readOnly />
               </label>
               <label>
                 <span className={labelClass}>Gender</span>
-                <select className={fieldClass} value={form.gender} onChange={(e) => setField('gender', e.target.value)}>
+                <select className={fieldClass} value={form.gender} disabled>
                   <option>Male</option>
                   <option>Female</option>
                 </select>
               </label>
               <label>
                 <span className={labelClass}>Age</span>
-                <input type="number" min="0" max="120" className={fieldClass} value={form.age} onChange={(e) => setField('age', e.target.value)} />
+                <input type="number" min="0" max="120" className={`${fieldClass} bg-[#f8fafc]`} value={form.age} readOnly />
               </label>
               <label className="md:col-span-2">
                 <span className={labelClass}>Address</span>
-                <input className={fieldClass} value={form.address} onChange={(e) => setField('address', e.target.value)} />
+                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.address} readOnly />
               </label>
               <label>
                 <span className={labelClass}>Doctor</span>
@@ -408,7 +457,10 @@ export default function Appointments() {
               </label>
               <label>
                 <span className={labelClass}>Appointment Date</span>
-                <input type="date" min={todayKey} className={fieldClass} value={form.appointment_date} onChange={(e) => setField('appointment_date', e.target.value)} required />
+                <select className={fieldClass} value={form.appointment_date} onChange={(e) => setField('appointment_date', e.target.value)} required disabled={!form.doctor_id}>
+                  <option value="">Select working date</option>
+                  {availableDates.map((date) => <option key={date.value} value={date.value}>{date.label}</option>)}
+                </select>
               </label>
               <label>
                 <span className={labelClass}>Appointment Time</span>
@@ -437,6 +489,16 @@ export default function Appointments() {
                   {paymentStatuses.map((status) => <option key={status}>{status}</option>)}
                 </select>
               </label>
+              {isPartial && (
+                <label>
+                  <span className={labelClass}>Amount Paid</span>
+                  <input type="number" min="0.01" max={appointmentTotal} step="0.01" className={fieldClass} value={form.paid_amount} onChange={(e) => setField('paid_amount', e.target.value)} required />
+                </label>
+              )}
+              <label>
+                <span className={labelClass}>Remaining Balance</span>
+                <input className={`${fieldClass} bg-[#f8fafc]`} value={money(remainingBalance)} readOnly />
+              </label>
               {needsAccount && (
                 <label>
                   <span className={labelClass}>Mobile Account</span>
@@ -455,12 +517,13 @@ export default function Appointments() {
               </div>
             )}
 
-            {workingHours && (
+            {Array.isArray(workingHours) && workingHours.length > 0 && (
               <div className="mt-4 rounded-lg border border-[#edf1f7] bg-[#fbfcff] p-3 text-xs text-[#667085]">
-                Working hours: <strong className="text-[#1f2937]">{workingHours.start} - {workingHours.end}</strong>
-                {' '} | Duration: <strong className="text-[#1f2937]">{workingHours.slot_minutes} min</strong>
-                {' '} | Capacity: <strong className="text-[#1f2937]">{workingHours.capacity}</strong>
-                {' '} | Available: <strong className="text-[#14a59a]">{workingHours.available}</strong>
+                {workingHours.map((hours) => (
+                  <span key={hours.shift} className="mr-4">
+                    <strong>{hours.shift}:</strong> {hours.start}-{hours.end} · {hours.available} available
+                  </span>
+                ))}
               </div>
             )}
 
@@ -469,7 +532,7 @@ export default function Appointments() {
                 <button
                   type="button"
                   onClick={closeBooking}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#6d28d9] px-5 py-2.5 text-sm font-semibold text-white"
                 >
                   Done
                 </button>
@@ -477,7 +540,8 @@ export default function Appointments() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#3b72cf] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ background: 'var(--clr-accent)' }}
                 >
                   <Save size={14} />
                   {saving ? 'Waiting for payment...' : 'Save Appointment'}

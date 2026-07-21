@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\Receipt;
 use App\Services\AuditLogService;
 use App\Services\WaafiPaymentService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +19,22 @@ use Carbon\Carbon;
 
 class AppointmentController extends Controller
 {
+    public function __construct(private NotificationService $notifications)
+    {
+    }
+
     private function isDoctorSlotAvailable($doctorId, $date, $time, $excludeId = null): array
     {
         $dayOfWeek = Carbon::parse($date)->format('l');
         $schedule = DoctorSchedule::where('doctor_id', $doctorId)
-                                  ->where('day_of_week', $dayOfWeek)
-                                  ->first();
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_working', true)
+            ->whereTime('start_time', '<=', $time)
+            ->whereTime('end_time', '>', $time)
+            ->first();
 
-        if (!$schedule || !$schedule->is_working) {
-            return [false, 'Doctor is not working on this day.'];
+        if (!$schedule) {
+            return [false, 'Selected time is outside the doctor registered working schedule.'];
         }
 
         $slotTime = Carbon::parse($time);
@@ -77,11 +85,13 @@ class AppointmentController extends Controller
         ]);
 
         $dayOfWeek = Carbon::parse($validated['appointment_date'])->format('l');
-        $schedule = DoctorSchedule::where('doctor_id', $validated['doctor_id'])
+        $schedules = DoctorSchedule::where('doctor_id', $validated['doctor_id'])
             ->where('day_of_week', $dayOfWeek)
-            ->first();
+            ->where('is_working', true)
+            ->orderBy('start_time')
+            ->get();
 
-        if (!$schedule || !$schedule->is_working) {
+        if ($schedules->isEmpty()) {
             return response()->json([
                 'slots' => [],
                 'message' => 'Doctor is not working on this day.',
@@ -96,34 +106,51 @@ class AppointmentController extends Controller
             ->all();
 
         $slots = [];
-        $cursor = Carbon::parse($schedule->start_time);
-        $end = Carbon::parse($schedule->end_time);
-        $minutes = max(5, (int) $schedule->slot_minutes);
-
-        while ($cursor->lt($end)) {
-            $time = $cursor->format('H:i');
-            if (!in_array($time, $booked, true)) {
-                $slots[] = [
-                    'time' => $time,
-                    'label' => $cursor->format('h:i A'),
-                ];
+        $workingHours = [];
+        foreach ($schedules as $schedule) {
+            $cursor = Carbon::parse($schedule->start_time);
+            $end = Carbon::parse($schedule->end_time);
+            $minutes = max(5, (int) $schedule->slot_minutes);
+            $shiftSlots = 0;
+            while ($cursor->lt($end)) {
+                $time = $cursor->format('H:i');
+                if (!in_array($time, $booked, true)) {
+                    $slots[] = [
+                        'time' => $time,
+                        'label' => "{$schedule->shift} - ".$cursor->format('h:i A'),
+                        'shift' => $schedule->shift,
+                    ];
+                    $shiftSlots++;
+                }
+                $cursor->addMinutes($minutes);
             }
-            $cursor->addMinutes($minutes);
-        }
-
-        $totalMinutes = max(0, Carbon::parse($schedule->start_time)->diffInMinutes(Carbon::parse($schedule->end_time)));
-
-        return response()->json([
-            'slots' => $slots,
-            'working_hours' => [
+            $totalMinutes = max(0, Carbon::parse($schedule->start_time)->diffInMinutes(Carbon::parse($schedule->end_time)));
+            $workingHours[] = [
+                'shift' => $schedule->shift,
                 'start' => Carbon::parse($schedule->start_time)->format('H:i'),
                 'end' => Carbon::parse($schedule->end_time)->format('H:i'),
                 'slot_minutes' => $minutes,
-                'total_hours' => round($totalMinutes / 60, 2),
                 'capacity' => intdiv($totalMinutes, $minutes),
-                'booked' => count($booked),
-                'available' => count($slots),
-            ],
+                'available' => $shiftSlots,
+            ];
+        }
+
+        return response()->json([
+            'slots' => $slots,
+            'working_hours' => $workingHours,
+        ]);
+    }
+
+    public function doctorSchedules(Doctor $doctor): JsonResponse
+    {
+        abort_unless($doctor->status === 'Active', 404, 'Doctor is not active.');
+
+        return response()->json([
+            'schedules' => $doctor->schedules()
+                ->where('is_working', true)
+                ->orderByRaw("CASE day_of_week WHEN 'Saturday' THEN 1 WHEN 'Sunday' THEN 2 WHEN 'Monday' THEN 3 WHEN 'Tuesday' THEN 4 WHEN 'Wednesday' THEN 5 WHEN 'Thursday' THEN 6 WHEN 'Friday' THEN 7 ELSE 8 END")
+                ->orderBy('start_time')
+                ->get(['id', 'doctor_id', 'day_of_week', 'shift', 'start_time', 'end_time', 'slot_minutes', 'is_working']),
         ]);
     }
 
@@ -196,6 +223,7 @@ class AppointmentController extends Controller
 
             DB::commit();
             AuditLogService::log('Booked appointment', 'Appointments', $appointment->id);
+            $this->notifications->appointmentConfirmation($appointment);
 
             return response()->json($appointment, 201);
         } catch (\Exception $e) {
@@ -207,16 +235,18 @@ class AppointmentController extends Controller
     public function book(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_name' => 'required|string|max:150',
-            'patient_phone' => 'required|string|max:30',
-            'gender' => ['required', Rule::in(['Male', 'Female'])],
+            'patient_id' => 'required|exists:patients,id',
+            'patient_name' => 'nullable|string|max:150',
+            'patient_phone' => 'nullable|string|max:30',
+            'gender' => ['nullable', Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'address' => 'nullable|string|max:255',
             'doctor_id' => 'required|exists:doctors,id',
             'appointment_date' => 'required|date|after_or_equal:today',
             'appointment_time' => 'required|date_format:H:i',
             'payment_method' => ['required', Rule::in(['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'])],
-            'payment_status' => ['required', Rule::in(['Paid', 'Partial', 'Outstanding'])],
+            'payment_status' => ['required', Rule::in(['Full Paid', 'Partial Paid'])],
+            'paid_amount' => 'nullable|required_if:payment_status,Partial Paid|numeric|decimal:0,2|min:0.01',
             'account_no' => 'nullable|string|max:30',
             'payment_notes' => 'nullable|string|max:1000',
         ]);
@@ -234,6 +264,18 @@ class AppointmentController extends Controller
                 DB::rollBack();
                 return response()->json(['message' => 'Selected doctor does not have a consultation fee configured.'], 422);
             }
+            $paidAmount = $validated['payment_status'] === 'Full Paid'
+                ? $fee
+                : round((float) $validated['paid_amount'], 2);
+            if ($paidAmount <= 0 || $paidAmount > $fee) {
+                DB::rollBack();
+                return response()->json(['message' => 'Paid amount must be greater than zero and cannot exceed the appointment total.'], 422);
+            }
+            if ($validated['payment_status'] === 'Partial Paid' && $paidAmount >= $fee) {
+                DB::rollBack();
+                return response()->json(['message' => 'Partial Paid amount must be less than the appointment total.'], 422);
+            }
+            $remainingAmount = round($fee - $paidAmount, 2);
 
             [$available, $msg] = $this->isDoctorSlotAvailable(
                 $doctor->id,
@@ -246,14 +288,8 @@ class AppointmentController extends Controller
                 return response()->json(['message' => $msg], 422);
             }
 
-            $patient = Patient::firstOrNew([
-                'full_name' => $validated['patient_name'],
-                'phone' => $validated['patient_phone'],
-            ]);
+            $patient = Patient::findOrFail($validated['patient_id']);
             $patient->fill([
-                'gender' => $validated['gender'],
-                'age' => $validated['age'] ?? $patient->age,
-                'address' => $validated['address'] ?? $patient->address,
                 'assigned_doctor_id' => $doctor->id,
             ]);
             $patient->save();
@@ -270,14 +306,14 @@ class AppointmentController extends Controller
 
             $referenceNumber = 'APT-' . date('Ymd') . '-' . str_pad($appointment->id, 5, '0', STR_PAD_LEFT);
             $mobileMethods = ['EVC Plus', 'Zaad', 'Sahal'];
-            if ($validated['payment_status'] === 'Paid' && in_array($validated['payment_method'], $mobileMethods, true)) {
+            if (in_array($validated['payment_method'], $mobileMethods, true)) {
                 if (empty($validated['account_no'])) {
                     DB::rollBack();
                     return response()->json(['message' => 'Mobile account number is required for paid mobile payments.'], 422);
                 }
 
                 $waafiResult = app(WaafiPaymentService::class)->charge(
-                    $fee,
+                    $paidAmount,
                     $validated['account_no'],
                     $referenceNumber,
                     'INV-' . $appointment->id,
@@ -295,10 +331,13 @@ class AppointmentController extends Controller
             $payment = Payment::create([
                 'patient_id' => $patient->id,
                 'appointment_id' => $appointment->id,
-                'amount' => $fee,
+                'amount' => $paidAmount,
+                'total_amount' => $fee,
+                'paid_amount' => $paidAmount,
+                'remaining_amount' => $remainingAmount,
                 'payment_method' => $validated['payment_method'],
                 'payment_status' => $validated['payment_status'],
-                'paid_at' => $validated['payment_status'] === 'Paid' ? now() : null,
+                'paid_at' => now(),
                 'reference_number' => $referenceNumber,
                 'notes' => $validated['payment_notes'] ?? 'Appointment booking fee',
                 'created_by' => auth()->id(),
@@ -311,6 +350,8 @@ class AppointmentController extends Controller
 
             DB::commit();
             AuditLogService::log('Booked appointment with payment', 'Appointments', $appointment->id);
+            $this->notifications->appointmentConfirmation($appointment);
+            $this->notifications->paymentConfirmation($payment);
 
             return response()->json([
                 'message' => 'Appointment booked successfully.',

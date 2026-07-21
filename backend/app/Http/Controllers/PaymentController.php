@@ -92,6 +92,9 @@ class PaymentController extends Controller
         try {
             $validated['created_by'] = auth()->id();
             $validated['paid_at'] = in_array($validated['payment_status'], ['Paid', 'Partial'], true) ? now() : null;
+            $validated['total_amount'] = $validated['amount'];
+            $validated['paid_amount'] = $validated['payment_status'] === 'Outstanding' ? 0 : $validated['amount'];
+            $validated['remaining_amount'] = $validated['payment_status'] === 'Outstanding' ? $validated['amount'] : 0;
             $payment = Payment::create($validated);
 
             Receipt::create([

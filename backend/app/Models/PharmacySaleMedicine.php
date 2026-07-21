@@ -16,7 +16,10 @@ class PharmacySaleMedicine extends Model
     protected $fillable = [
         'sale_id',
         'medicine_id',
+        'prescription_medicine_id',
         'quantity',
+        'frequency',
+        'instructions',
         'unit_price',
         'subtotal',
     ];
@@ -29,5 +32,10 @@ class PharmacySaleMedicine extends Model
     public function medicine()
     {
         return $this->belongsTo(Medicine::class, 'medicine_id');
+    }
+
+    public function prescriptionMedicine()
+    {
+        return $this->belongsTo(PrescriptionMedicine::class, 'prescription_medicine_id');
     }
 }

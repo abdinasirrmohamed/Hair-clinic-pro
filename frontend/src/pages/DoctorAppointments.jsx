@@ -62,7 +62,7 @@ export default function DoctorAppointments() {
         </div>
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold"
-          style={{ background: 'var(--clr-accent-soft)', color: '#22c55e', border: '1px solid rgba(34,197,94,.2)' }}
+          style={{ background: 'var(--clr-accent-soft)', color: '#7c3aed', border: '1px solid rgba(124,58,237,.2)' }}
         >
           <CalendarCheck size={13} />
           {rows.length} total
@@ -91,7 +91,7 @@ export default function DoctorAppointments() {
                 value={row.status}
                 onChange={(e) => changeStatus(row.id, e.target.value)}
                 style={selectStyle}
-                onFocus={(e) => { e.target.style.borderColor = '#22c55e'; }}
+                onFocus={(e) => { e.target.style.borderColor = '#7c3aed'; }}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--clr-border)'; }}
               >
                 {STATUS_OPTIONS.map((s) => (

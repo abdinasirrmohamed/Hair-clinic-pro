@@ -17,8 +17,12 @@ class PrescriptionMedicine extends Model
         'prescription_id',
         'medicine_id',
         'quantity',
+        'frequency',
+        'dispensed_quantity',
         'instructions',
     ];
+
+    protected $casts = ['quantity' => 'integer', 'dispensed_quantity' => 'integer'];
 
     public function prescription()
     {

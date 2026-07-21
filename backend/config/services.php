@@ -42,4 +42,11 @@ return [
         'api_key' => env('WAAFI_API_KEY'),
     ],
 
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+        'endpoint' => env('SMS_ENDPOINT'),
+        'token' => env('SMS_API_TOKEN'),
+        'sender_id' => env('SMS_SENDER_ID', 'HairClinic'),
+    ],
+
 ];

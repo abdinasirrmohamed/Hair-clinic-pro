@@ -88,8 +88,8 @@ export default function Sidebar({ onClose }) {
         className="flex items-center gap-2.5 px-4 py-4"
         style={{ borderBottom: '1px solid var(--clr-border)' }}
       >
-        <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
-          <Activity size={16} className="text-[#052e10]" />
+        <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shrink-0">
+          <Activity size={16} className="text-[#ffffff]" />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-bold truncate" style={{ color: 'var(--clr-text)' }}>
@@ -114,7 +114,7 @@ export default function Sidebar({ onClose }) {
               className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-colors"
               style={({ isActive }) => ({
                 background: isActive ? '#dcfce7' : 'transparent',
-                color: isActive ? '#16a34a' : '#2f6b43',
+                color: isActive ? '#6d28d9' : '#2f6b43',
               })}
             >
               <Icon size={16} />
@@ -154,13 +154,13 @@ export default function Sidebar({ onClose }) {
                   className={({ isActive }) =>
                     `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-green-500'
+                        ? 'bg-violet-600'
                         : ''
                     }`
                   }
                   style={({ isActive }) =>
                     isActive
-                      ? { color: '#052e10' }
+                      ? { color: '#ffffff' }
                       : { color: 'var(--clr-muted)' }
                   }
                 >
@@ -168,7 +168,7 @@ export default function Sidebar({ onClose }) {
                     <>
                       <Icon
                         size={15}
-                        style={{ color: isActive ? '#052e10' : 'var(--clr-muted)', flexShrink: 0 }}
+                        style={{ color: isActive ? '#ffffff' : 'var(--clr-muted)', flexShrink: 0 }}
                       />
                       <span>{itemLabel}</span>
                     </>
@@ -191,22 +191,22 @@ export default function Sidebar({ onClose }) {
           onClick={onClose}
           className={({ isActive }) =>
             `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive ? 'bg-green-500' : ''
+              isActive ? 'bg-violet-600' : ''
             }`
           }
           style={({ isActive }) =>
-            isActive ? { color: '#052e10' } : { color: 'var(--clr-muted)' }
+            isActive ? { color: '#ffffff' } : { color: 'var(--clr-muted)' }
           }
         >
           {({ isActive }) => (
             <>
               <div
-                className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0 overflow-hidden"
+                className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center shrink-0 overflow-hidden"
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={user?.full_name ?? 'Profile'} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-[10px] font-bold text-[#052e10]">
+                  <span className="text-[10px] font-bold text-[#ffffff]">
                     {initials(user?.full_name)}
                   </span>
                 )}
@@ -214,13 +214,13 @@ export default function Sidebar({ onClose }) {
               <div className="min-w-0 flex-1">
                 <p
                   className="text-xs font-semibold truncate"
-                  style={{ color: isActive ? '#052e10' : 'var(--clr-text)' }}
+                  style={{ color: isActive ? '#ffffff' : 'var(--clr-text)' }}
                 >
                   {user?.full_name}
                 </p>
                 <p
                   className="text-[10px] truncate"
-                  style={{ color: isActive ? '#052e10cc' : 'var(--clr-section)' }}
+                  style={{ color: isActive ? '#ffffffcc' : 'var(--clr-section)' }}
                 >
                   {user?.role}
                 </p>

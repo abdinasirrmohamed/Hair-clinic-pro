@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Alert from '../components/ui/Alert';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Modal from '../components/ui/Modal';
+import PasswordInput from '../components/ui/PasswordInput';
 import { CheckSquare, Edit, Plus, RefreshCw, Search, Shield, Trash2 } from 'lucide-react';
 
 const roles = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User', 'Lab User'];
@@ -118,7 +119,7 @@ export default function Users() {
             Staff accounts, roles, and per-user access permissions.
           </p>
         </div>
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#22c55e', color: '#052e10' }}>
+        <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: '#7c3aed', color: '#ffffff' }}>
           <Plus size={15} />
           Add User
         </button>
@@ -173,7 +174,7 @@ export default function Users() {
                       <td className="px-5 py-3 font-mono text-xs" style={{ color: 'var(--clr-muted)' }}>{user.username}</td>
                       <td className="px-5 py-3" style={{ color: 'var(--clr-text)' }}>{user.role}</td>
                       <td className="px-5 py-3">
-                        <span className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: user.status === 'Active' ? '#22c55e18' : '#f8717118', color: user.status === 'Active' ? '#22c55e' : '#f87171' }}>
+                        <span className="px-2 py-1 rounded-full text-[11px] font-bold" style={{ background: user.status === 'Active' ? '#7c3aed18' : '#f8717118', color: user.status === 'Active' ? '#7c3aed' : '#f87171' }}>
                           {user.status}
                         </span>
                       </td>
@@ -319,9 +320,8 @@ function UserEditor({ user, allModules, rolePermissions, saving, setSaving, onCl
           </label>
           <label className="md:col-span-2 space-y-1">
             <span className="text-xs font-semibold" style={{ color: 'var(--clr-muted)' }}>{editing ? 'New Password (optional)' : 'Password'}</span>
-            <input
+            <PasswordInput
               required={!editing}
-              type="password"
               value={form.password ?? ''}
               onChange={(e) => set('password', e.target.value)}
               placeholder="Strong password: upper, lower, number, symbol"
@@ -334,7 +334,7 @@ function UserEditor({ user, allModules, rolePermissions, saving, setSaving, onCl
         <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--clr-search-bg)', border: '1px solid var(--clr-border)' }}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Shield size={16} className="text-green-500" />
+              <Shield size={16} className="text-violet-600" />
               <div>
                 <p className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>Module Access</p>
                 <p className="text-xs" style={{ color: 'var(--clr-muted)' }}>{(form.module_permissions ?? []).length} selected</p>
@@ -351,15 +351,15 @@ function UserEditor({ user, allModules, rolePermissions, saving, setSaving, onCl
             {allModules.map((module) => {
               const checked = (form.module_permissions ?? []).includes(module);
               return (
-                <label key={module} className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer" style={{ background: checked ? '#22c55e18' : 'var(--clr-card)', border: `1px solid ${checked ? '#22c55e55' : 'var(--clr-border)'}` }}>
+                <label key={module} className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer" style={{ background: checked ? '#7c3aed18' : 'var(--clr-card)', border: `1px solid ${checked ? '#7c3aed55' : 'var(--clr-border)'}` }}>
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleModule(module)}
-                    className="h-4 w-4 accent-green-500"
+                    className="h-4 w-4 accent-violet-600"
                   />
-                  <CheckSquare size={14} style={{ color: checked ? '#22c55e' : 'var(--clr-muted)' }} />
-                  <span className="text-sm font-semibold" style={{ color: checked ? '#22c55e' : 'var(--clr-text)' }}>
+                  <CheckSquare size={14} style={{ color: checked ? '#7c3aed' : 'var(--clr-muted)' }} />
+                  <span className="text-sm font-semibold" style={{ color: checked ? '#7c3aed' : 'var(--clr-text)' }}>
                     {moduleLabels[module] ?? module}
                   </span>
                 </label>
@@ -372,7 +372,7 @@ function UserEditor({ user, allModules, rolePermissions, saving, setSaving, onCl
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-bold" style={{ background: 'var(--clr-hover)', color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}>
             Cancel
           </button>
-          <button disabled={saving} className="px-5 py-2 rounded-lg text-sm font-bold" style={{ background: '#22c55e', color: '#052e10' }}>
+          <button disabled={saving} className="px-5 py-2 rounded-lg text-sm font-bold" style={{ background: '#7c3aed', color: '#ffffff' }}>
             {saving ? 'Saving...' : 'Save User'}
           </button>
         </div>

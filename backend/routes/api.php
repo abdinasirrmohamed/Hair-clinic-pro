@@ -53,7 +53,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('module:doctors')->group(function () {
         Route::apiResource('doctors', DoctorController::class);
         Route::get('doctors/{doctor}/schedules', [DoctorScheduleController::class, 'index']);
-        Route::put('doctors/{doctor}/schedules', [DoctorScheduleController::class, 'update']);
+        Route::middleware('role:Administrator')->group(function () {
+            Route::put('doctors/{doctor}/schedules', [DoctorScheduleController::class, 'update']);
+            Route::post('doctors/{doctor}/schedules', [DoctorScheduleController::class, 'store']);
+            Route::put('doctors/{doctor}/schedules/{schedule}', [DoctorScheduleController::class, 'updateOne']);
+            Route::delete('doctors/{doctor}/schedules/{schedule}', [DoctorScheduleController::class, 'destroy']);
+        });
         Route::get('doctors/{doctor}/blocked-dates', [DoctorScheduleController::class, 'blockedDates']);
         Route::post('doctors/{doctor}/blocked-dates', [DoctorScheduleController::class, 'addBlockedDate']);
         Route::delete('doctors/{doctor}/blocked-dates/{blockedDate}', [DoctorScheduleController::class, 'removeBlockedDate']);
@@ -69,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('module:appointments')->group(function () {
         Route::get('appointments/reminders', [AppointmentController::class, 'reminders']);
         Route::get('appointments/available-slots', [AppointmentController::class, 'availableSlots']);
+        Route::get('appointments/doctors/{doctor}/schedules', [AppointmentController::class, 'doctorSchedules']);
         Route::get('appointments/calendar', [AppointmentController::class, 'calendar']);
         Route::post('appointments/book', [AppointmentController::class, 'book']);
         Route::apiResource('appointments', AppointmentController::class);
@@ -91,7 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Prescriptions
     Route::middleware('module:prescriptions')->group(function () {
-        Route::apiResource('prescriptions', PrescriptionController::class)->only(['index', 'store', 'show']);
+        Route::apiResource('prescriptions', PrescriptionController::class)->only(['index', 'store', 'show', 'update']);
     });
 
     // Payments
