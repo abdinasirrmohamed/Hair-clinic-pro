@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarCheck, Plus, Printer, RefreshCw, Save, Search } from 'lucide-react';
 import api, { asRows } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import { initials, money } from '../utils/formatters';
 
 const initialForm = {
+  patient_mode: 'existing',
   patient_id: '',
   patient_name: '',
   patient_phone: '',
@@ -59,6 +60,7 @@ export default function Appointments() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [completedPayment, setCompletedPayment] = useState(null);
   const [receipt, setReceipt] = useState(null);
+  const bookingRequest = useRef(null);
 
   const doctors = lookups?.doctors ?? [];
   const selectedDoctor = useMemo(
@@ -158,6 +160,8 @@ export default function Appointments() {
 
   const submit = async (event) => {
     event.preventDefault();
+    const controller = new AbortController();
+    bookingRequest.current = controller;
     setSaving(true);
     setBookingError('');
     setBookingComplete(false);
@@ -173,7 +177,7 @@ export default function Appointments() {
         ...form,
         age: form.age === '' ? null : Number(form.age),
       };
-      const { data } = await api.post('/appointments/book', payload);
+      const { data } = await api.post('/appointments/book', payload, { signal: controller.signal });
       setMessage({ text: 'Appointment booked, patient registered, and payment recorded successfully.', type: 'success' });
       setPaymentFeedback({
         text: needsAccount
@@ -187,14 +191,19 @@ export default function Appointments() {
       await loadCalendar();
       await refresh();
     } catch (err) {
+      if (controller.signal.aborted) return;
       setBookingError(err.message);
       setPaymentFeedback({ text: err.message, type: 'danger' });
     } finally {
+      if (bookingRequest.current === controller) bookingRequest.current = null;
       setSaving(false);
     }
   };
 
   const closeBooking = () => {
+    bookingRequest.current?.abort();
+    bookingRequest.current = null;
+    setSaving(false);
     if (bookingComplete && completedPayment) {
       setReceipt(completedPayment);
     }
@@ -205,6 +214,8 @@ export default function Appointments() {
     setCompletedPayment(null);
     setForm(initialForm);
   };
+
+  useEffect(() => () => bookingRequest.current?.abort(), []);
 
   const todayKey = new Date().toISOString().slice(0, 10);
   const stats = useMemo(() => {
@@ -413,30 +424,40 @@ export default function Appointments() {
           <form onSubmit={submit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <label>
-                <span className={labelClass}>Patient</span>
-                <select className={fieldClass} value={form.patient_id} onChange={(e) => setField('patient_id', e.target.value)} required>
-                  <option value="">Select patient</option>
-                  {(lookups?.patients ?? []).map((patient) => <option key={patient.id} value={patient.id}>{patient.full_name} · {patient.phone}</option>)}
+                <span className={labelClass}>Patient Type</span>
+                <select className={fieldClass} value={form.patient_mode} onChange={(e) => setForm((current) => ({ ...initialForm, patient_mode: e.target.value, doctor_id: current.doctor_id }))} disabled={saving}>
+                  <option value="existing">Existing Patient</option>
+                  <option value="new">New Patient</option>
                 </select>
               </label>
+              {form.patient_mode === 'existing' ? <label>
+                <span className={labelClass}>Existing Patient</span>
+                <select className={fieldClass} value={form.patient_id} onChange={(e) => setField('patient_id', e.target.value)} required>
+                  <option value="">Select patient</option>
+                  {(lookups?.patients ?? []).map((patient) => <option key={patient.id} value={patient.id}>{patient.patient_code ?? `PAT-${String(patient.id).padStart(6, '0')}`} · {patient.full_name} · {patient.phone}</option>)}
+                </select>
+              </label> : <label>
+                <span className={labelClass}>Patient Name</span>
+                <input className={fieldClass} value={form.patient_name} onChange={(e) => setField('patient_name', e.target.value)} required />
+              </label>}
               <label>
                 <span className={labelClass}>Patient Phone</span>
-                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.patient_phone} readOnly />
+                <input className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.patient_phone} onChange={(e) => setField('patient_phone', e.target.value)} readOnly={form.patient_mode === 'existing'} required={form.patient_mode === 'new'} />
               </label>
               <label>
                 <span className={labelClass}>Gender</span>
-                <select className={fieldClass} value={form.gender} disabled>
+                <select className={fieldClass} value={form.gender} onChange={(e) => setField('gender', e.target.value)} disabled={form.patient_mode === 'existing'}>
                   <option>Male</option>
                   <option>Female</option>
                 </select>
               </label>
               <label>
                 <span className={labelClass}>Age</span>
-                <input type="number" min="0" max="120" className={`${fieldClass} bg-[#f8fafc]`} value={form.age} readOnly />
+                <input type="number" min="0" max="120" className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.age} onChange={(e) => setField('age', e.target.value)} readOnly={form.patient_mode === 'existing'} />
               </label>
               <label className="md:col-span-2">
                 <span className={labelClass}>Address</span>
-                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.address} readOnly />
+                <input className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.address} onChange={(e) => setField('address', e.target.value)} readOnly={form.patient_mode === 'existing'} />
               </label>
               <label>
                 <span className={labelClass}>Doctor</span>
@@ -528,6 +549,16 @@ export default function Appointments() {
             )}
 
             <div className="mt-6 flex justify-end gap-3">
+              {!bookingComplete && (
+                <button
+                  type="button"
+                  onClick={closeBooking}
+                  className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold"
+                  style={{ color: 'var(--clr-muted)', border: '1px solid var(--clr-border)' }}
+                >
+                  Cancel
+                </button>
+              )}
               {bookingComplete ? (
                 <button
                   type="button"
@@ -544,7 +575,7 @@ export default function Appointments() {
                   style={{ background: 'var(--clr-accent)' }}
                 >
                   <Save size={14} />
-                  {saving ? 'Waiting for payment...' : 'Save Appointment'}
+                  {saving ? 'Processing payment...' : 'Save Appointment'}
                 </button>
               )}
             </div>

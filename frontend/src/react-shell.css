@@ -83,7 +83,7 @@ button {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: #1769e0;
+  background: var(--clr-accent);
   color: white;
   font-weight: 800;
 }

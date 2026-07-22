@@ -85,9 +85,10 @@ class WaafiPaymentService
         try {
             $response = Http::asJson()
                 ->acceptJson()
-                ->connectTimeout(10)
-                ->timeout(45)
-                ->retry(2, 500)
+                // A mobile prompt is interactive. Retrying a charge can create
+                // duplicate prompts and previously pushed PHP past max_execution_time.
+                ->connectTimeout(3)
+                ->timeout(12)
                 ->post($this->endpoint, $payload);
             $data = $response->json();
 
@@ -146,6 +147,13 @@ class WaafiPaymentService
                     $responseCode,
                     $data['responseMsg'] ?? $data['error']['message'] ?? null
                 ),
+            ], $amount, $accountNo, $referenceId, $invoiceId);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return $this->result([
+                'success' => false,
+                'transaction_id' => '',
+                'response_code' => 'TIMEOUT',
+                'message' => 'Payment was cancelled or not approved in time. Nothing was recorded; please try again.',
             ], $amount, $accountNo, $referenceId, $invoiceId);
         } catch (\Exception $e) {
             return $this->result([

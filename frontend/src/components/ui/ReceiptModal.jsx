@@ -1,5 +1,6 @@
 import { Printer, X } from 'lucide-react';
 import { money } from '../../utils/formatters';
+import BrandLogo from './BrandLogo';
 
 const line = (label, value) => value !== undefined && value !== null && value !== ''
   ? `<tr><td>${label}</td><td>${value}</td></tr>`
@@ -62,6 +63,8 @@ function printReceipt(type, receipt) {
         <style>
           body { font-family: Arial, sans-serif; color: #111827; padding: 28px; }
           .receipt { max-width: 640px; margin: 0 auto; }
+          .brand { display: flex; align-items: center; gap: 10px; }
+          .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; font-size: 12px; font-weight: 800; }
           h1 { margin: 0; font-size: 22px; }
           .muted { color: #6b7280; font-size: 12px; margin: 4px 0 22px; }
           table { width: 100%; border-collapse: collapse; }
@@ -76,7 +79,7 @@ function printReceipt(type, receipt) {
       </head>
       <body>
         <div class="receipt">
-          <h1>Hair Clinic Pro</h1>
+          <div class="brand"><span class="brand-mark">HC</span><h1>Hair Clinic Pro</h1></div>
           <p class="muted">${title}</p>
           <table>${rows}</table>
         </div>
@@ -102,9 +105,12 @@ export default function ReceiptModal({ type = 'payment', receipt, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(2,6,23,.72)' }}>
       <div className="w-full max-w-lg rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--clr-border)' }}>
-          <div>
+          <div className="flex items-center gap-3">
+            <BrandLogo size="sm" />
+            <div>
             <h2 className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>{title}</h2>
             <p className="text-xs mt-1 font-mono" style={{ color: 'var(--clr-muted)' }}>{number}</p>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'var(--clr-muted)' }}>
             <X size={16} />

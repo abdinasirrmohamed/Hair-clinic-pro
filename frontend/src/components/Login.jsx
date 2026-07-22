@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { login } from '../api.js';
+import BrandLogo from './ui/BrandLogo.jsx';
 
 export function Login({ onLogin }) {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -15,7 +16,7 @@ export function Login({ onLogin }) {
   return (
     <div className="login-page">
       <section className="react-login-card">
-        <div className="login-brand"><span className="login-logo">HC</span><div><h1>Hair Clinic Pro</h1><p>Clinic Management System</p></div></div>
+        <div className="login-brand"><BrandLogo size="lg" /><div><h1>Hair Clinic Pro</h1><p>Clinic Management System</p></div></div>
         <h2>Welcome back</h2><p>Sign in to continue to your workspace.</p>
         {error && <div className="alert alert-danger">{error}</div>}
         <form onSubmit={submit}>

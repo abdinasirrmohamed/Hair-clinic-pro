@@ -30,6 +30,13 @@ class Patient extends Model
         'date_of_birth' => 'date:Y-m-d',
     ];
 
+    protected $appends = ['patient_code'];
+
+    public function getPatientCodeAttribute(): string
+    {
+        return 'PAT-' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+    }
+
     public function appointments()
     {
         return $this->hasMany(Appointment::class, 'patient_id');

@@ -235,10 +235,11 @@ class AppointmentController extends Controller
     public function book(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'patient_name' => 'nullable|string|max:150',
-            'patient_phone' => 'nullable|string|max:30',
-            'gender' => ['nullable', Rule::in(['Male', 'Female'])],
+            'patient_mode' => 'required|in:existing,new',
+            'patient_id' => 'nullable|required_if:patient_mode,existing|exists:patients,id',
+            'patient_name' => 'nullable|required_if:patient_mode,new|string|max:150',
+            'patient_phone' => 'nullable|required_if:patient_mode,new|string|max:30',
+            'gender' => ['nullable', 'required_if:patient_mode,new', Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
             'address' => 'nullable|string|max:255',
             'doctor_id' => 'required|exists:doctors,id',
@@ -288,11 +289,19 @@ class AppointmentController extends Controller
                 return response()->json(['message' => $msg], 422);
             }
 
-            $patient = Patient::findOrFail($validated['patient_id']);
-            $patient->fill([
-                'assigned_doctor_id' => $doctor->id,
-            ]);
-            $patient->save();
+            if ($validated['patient_mode'] === 'new') {
+                $patient = Patient::create([
+                    'full_name' => $validated['patient_name'],
+                    'phone' => $validated['patient_phone'],
+                    'gender' => $validated['gender'],
+                    'age' => $validated['age'] ?? null,
+                    'address' => $validated['address'] ?? null,
+                    'assigned_doctor_id' => $doctor->id,
+                ]);
+            } else {
+                $patient = Patient::findOrFail($validated['patient_id']);
+                $patient->update(['assigned_doctor_id' => $doctor->id]);
+            }
 
             $appointment = Appointment::create([
                 'patient_id' => $patient->id,

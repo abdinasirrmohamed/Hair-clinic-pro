@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Alert from '../components/ui/Alert';
-import { Activity, Eye, EyeOff, Lock, User } from 'lucide-react';
+import BrandLogo from '../components/ui/BrandLogo';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -74,9 +75,7 @@ export default function Login() {
         >
           {/* Brand */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-              <Activity size={20} className="text-[#ffffff]" />
-            </div>
+            <BrandLogo size="md" />
             <div>
               <p className="text-base font-bold text-white">Hair Clinic Pro</p>
               <p className="text-xs" style={{ color: '#3a5c42' }}>Management System</p>

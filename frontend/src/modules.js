@@ -32,8 +32,8 @@ export const modules = {
     fields: [field('user_id', 'Doctor User Account', 'lookup', { lookup: 'doctor_users' }), field('specialization', 'Specialization', 'select', { options: doctorSpecializations }), field('qualification', 'Qualification', 'select', { options: doctorQualifications }), field('phone', 'Phone'), field('consultation_fee', 'Consultation Fee', 'number', { min: 0 }), field('email', 'Email', 'email'), field('license_number', 'License Number'), field('experience_years', 'Experience (years)', 'number', { step: 1, min: 0, max: 80 }), field('bio', 'Biography', 'textarea'), field('status', 'Status', 'select', { options: statuses }), field('photo', 'Photo', 'file')],
   },
   patients: {
-    endpoint: '/patients', columns: ['full_name', 'phone', 'email', 'gender', 'created_at'],
-    labels: { full_name: 'Patient Name', phone: 'Phone', email: 'Email', gender: 'Gender', created_at: 'Registered' },
+    endpoint: '/patients', columns: ['patient_code', 'full_name', 'phone', 'email', 'gender', 'created_at'],
+    labels: { patient_code: 'Patient ID', full_name: 'Patient Name', phone: 'Phone', email: 'Email', gender: 'Gender', created_at: 'Registered' },
     fields: [field('full_name', 'Full Name'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('gender', 'Gender', 'select', { options: ['Male', 'Female'] }), field('date_of_birth', 'Date of Birth', 'date', { max: new Date().toISOString().slice(0, 10) }), field('age', 'Age (calculated)', 'number', { step: 1, min: 0, max: 120, readOnly: true }), field('address', 'Address'), field('assigned_doctor_id', 'Assigned Doctor', 'lookup', { lookup: 'doctors' }), field('medical_notes', 'Medical Notes', 'textarea')],
   },
   appointments: {

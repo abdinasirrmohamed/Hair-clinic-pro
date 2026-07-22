@@ -32,6 +32,9 @@ class PatientController extends Controller
                 $q->where('full_name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
+                if (preg_match('/^(?:PAT-)?0*(\d+)$/i', trim($search), $matches)) {
+                    $q->orWhereKey((int) $matches[1]);
+                }
             });
         }
 

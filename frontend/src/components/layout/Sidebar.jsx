@@ -1,8 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { initials } from '../../utils/formatters';
+import BrandLogo from '../ui/BrandLogo';
 import {
-  Activity, Archive, BarChart2, Calendar, CalendarCheck, ClipboardList,
+  Archive, BarChart2, Calendar, CalendarCheck, ClipboardList,
   CreditCard, FileText, LayoutDashboard, LogOut, Pill, Scissors,
   Shield, ShoppingCart, Stethoscope, UserCheck, Users, Wallet, History, Settings, FlaskConical,
 } from 'lucide-react';
@@ -88,9 +89,7 @@ export default function Sidebar({ onClose }) {
         className="flex items-center gap-2.5 px-4 py-4"
         style={{ borderBottom: '1px solid var(--clr-border)' }}
       >
-        <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shrink-0">
-          <Activity size={16} className="text-[#ffffff]" />
-        </div>
+        <BrandLogo size="sm" />
         <div className="min-w-0">
           <p className="text-sm font-bold truncate" style={{ color: 'var(--clr-text)' }}>
             Hair Clinic Pro

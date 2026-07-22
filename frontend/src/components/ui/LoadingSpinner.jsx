@@ -17,9 +17,7 @@ export function PageLoader({ text = 'Loading Hair Clinic Pro…' }) {
       style={{ background: 'var(--clr-body)' }}
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-          <span className="text-[#ffffff] font-bold text-sm">HC</span>
-        </div>
+        <BrandLogo size="md" />
         <span className="text-xl font-bold" style={{ color: 'var(--clr-text)' }}>
           Hair Clinic Pro
         </span>
@@ -32,3 +30,4 @@ export function PageLoader({ text = 'Loading Hair Clinic Pro…' }) {
     </div>
   );
 }
+import BrandLogo from './BrandLogo';
