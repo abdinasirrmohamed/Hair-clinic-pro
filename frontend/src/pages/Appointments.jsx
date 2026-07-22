@@ -10,7 +10,6 @@ import StatusBadge from '../components/ui/StatusBadge';
 import { initials, money } from '../utils/formatters';
 
 const initialForm = {
-  patient_mode: 'existing',
   patient_id: '',
   patient_name: '',
   patient_phone: '',
@@ -424,40 +423,30 @@ export default function Appointments() {
           <form onSubmit={submit}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <label>
-                <span className={labelClass}>Patient Type</span>
-                <select className={fieldClass} value={form.patient_mode} onChange={(e) => setForm((current) => ({ ...initialForm, patient_mode: e.target.value, doctor_id: current.doctor_id }))} disabled={saving}>
-                  <option value="existing">Existing Patient</option>
-                  <option value="new">New Patient</option>
-                </select>
-              </label>
-              {form.patient_mode === 'existing' ? <label>
-                <span className={labelClass}>Existing Patient</span>
+                <span className={labelClass}>Patient</span>
                 <select className={fieldClass} value={form.patient_id} onChange={(e) => setField('patient_id', e.target.value)} required>
                   <option value="">Select patient</option>
                   {(lookups?.patients ?? []).map((patient) => <option key={patient.id} value={patient.id}>{patient.patient_code ?? `PAT-${String(patient.id).padStart(6, '0')}`} · {patient.full_name} · {patient.phone}</option>)}
                 </select>
-              </label> : <label>
-                <span className={labelClass}>Patient Name</span>
-                <input className={fieldClass} value={form.patient_name} onChange={(e) => setField('patient_name', e.target.value)} required />
-              </label>}
+              </label>
               <label>
                 <span className={labelClass}>Patient Phone</span>
-                <input className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.patient_phone} onChange={(e) => setField('patient_phone', e.target.value)} readOnly={form.patient_mode === 'existing'} required={form.patient_mode === 'new'} />
+                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.patient_phone} readOnly />
               </label>
               <label>
                 <span className={labelClass}>Gender</span>
-                <select className={fieldClass} value={form.gender} onChange={(e) => setField('gender', e.target.value)} disabled={form.patient_mode === 'existing'}>
+                <select className={fieldClass} value={form.gender} disabled>
                   <option>Male</option>
                   <option>Female</option>
                 </select>
               </label>
               <label>
                 <span className={labelClass}>Age</span>
-                <input type="number" min="0" max="120" className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.age} onChange={(e) => setField('age', e.target.value)} readOnly={form.patient_mode === 'existing'} />
+                <input type="number" min="0" max="120" className={`${fieldClass} bg-[#f8fafc]`} value={form.age} readOnly />
               </label>
               <label className="md:col-span-2">
                 <span className={labelClass}>Address</span>
-                <input className={`${fieldClass} ${form.patient_mode === 'existing' ? 'bg-[#f8fafc]' : ''}`} value={form.address} onChange={(e) => setField('address', e.target.value)} readOnly={form.patient_mode === 'existing'} />
+                <input className={`${fieldClass} bg-[#f8fafc]`} value={form.address} readOnly />
               </label>
               <label>
                 <span className={labelClass}>Doctor</span>
