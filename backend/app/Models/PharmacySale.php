@@ -16,6 +16,7 @@ class PharmacySale extends Model
     protected $fillable = [
         'sale_number',
         'customer_name',
+        'customer_id',
         'patient_id',
         'prescription_id',
         'medicine_count',
@@ -43,6 +44,11 @@ class PharmacySale extends Model
         'amount_paid' => 'decimal:2',
         'remaining_balance' => 'decimal:2',
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(PharmacyCustomer::class, 'customer_id');
+    }
 
     public function patient()
     {

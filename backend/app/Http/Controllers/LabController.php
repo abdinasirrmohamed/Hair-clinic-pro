@@ -35,7 +35,7 @@ class LabController extends Controller
         $validated = $request->validate([
             'test_name' => 'required|string|max:150',
             'category' => 'required|string|max:100',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
             'sample_type' => 'nullable|string|max:80',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
             'description' => 'nullable|string',
@@ -53,7 +53,7 @@ class LabController extends Controller
         $validated = $request->validate([
             'test_name' => 'string|max:150',
             'category' => 'string|max:100',
-            'price' => 'numeric|min:0',
+            'price' => 'numeric|decimal:0,2|min:0|max:99999999.99',
             'sample_type' => 'nullable|string|max:80',
             'status' => [Rule::in(['Active', 'Inactive'])],
             'description' => 'nullable|string',
@@ -93,10 +93,10 @@ class LabController extends Controller
     public function storeRequest(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'appointment_id' => 'nullable|exists:appointments,id',
-            'doctor_id' => 'nullable|exists:doctors,id',
-            'lab_test_id' => 'required|exists:lab_tests,id',
+            'patient_id' => 'integer|required|exists:patients,id',
+            'appointment_id' => ['nullable', 'integer', Rule::exists('appointments', 'id')->where('patient_id', $request->integer('patient_id'))],
+            'doctor_id' => 'integer|nullable|exists:doctors,id',
+            'lab_test_id' => ['required', 'integer', Rule::exists('lab_tests', 'id')->where('status', 'Active')],
             'request_date' => 'required|date|after_or_equal:today',
             'status' => ['nullable', Rule::in(['Requested', 'In Progress', 'Completed', 'Cancelled'])],
             'result' => 'nullable|string',
@@ -124,9 +124,9 @@ class LabController extends Controller
     public function updateRequest(Request $request, LabRequest $labRequest): JsonResponse
     {
         $validated = $request->validate([
-            'appointment_id' => 'nullable|exists:appointments,id',
-            'doctor_id' => 'nullable|exists:doctors,id',
-            'lab_test_id' => 'exists:lab_tests,id',
+            'appointment_id' => ['nullable', 'integer', Rule::exists('appointments', 'id')->where('patient_id', $labRequest->patient_id)],
+            'doctor_id' => 'integer|nullable|exists:doctors,id',
+            'lab_test_id' => 'integer|exists:lab_tests,id',
             'request_date' => 'date',
             'status' => [Rule::in(['Requested', 'In Progress', 'Completed', 'Cancelled'])],
             'result' => 'nullable|string',

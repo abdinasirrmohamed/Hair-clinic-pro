@@ -42,17 +42,18 @@ class DoctorController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'full_name' => 'nullable|string',
+            'full_name' => 'nullable|string|max:150',
             'specialization' => ['required', Rule::in($this->specializations)],
             'qualification' => ['nullable', Rule::in($this->qualifications)],
-            'phone' => 'required|string',
-            'consultation_fee' => 'nullable|numeric|min:0',
-            'email' => 'nullable|email',
-            'license_number' => 'required|string|unique:doctors',
+            'phone' => 'required|string|max:30',
+            'consultation_fee' => 'nullable|numeric|decimal:0,2|min:0|max:99999999.99',
+            'email' => 'nullable|email|max:150',
+            'license_number' => ['required', 'string', 'max:80', Rule::unique('doctors')->ignore(Doctor::where('user_id', $request->integer('user_id'))->value('id'))],
             'experience_years' => 'required|integer|min:0|max:80',
             'bio' => 'nullable|string',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
             'user_id' => [
+                'integer',
                 'required',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'Doctor')),
             ],
@@ -60,6 +61,9 @@ class DoctorController extends Controller
         ]);
 
         $validated['full_name'] = User::findOrFail($validated['user_id'])->full_name;
+        if (array_key_exists('status', $validated)) $validated['status'] ??= 'Active';
+
+        if (array_key_exists('consultation_fee', $validated)) $validated['consultation_fee'] ??= 0;
 
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('doctors', 'public');
@@ -125,23 +129,25 @@ class DoctorController extends Controller
     public function update(Request $request, Doctor $doctor): JsonResponse
     {
         $validated = $request->validate([
-            'full_name' => 'string',
+            'full_name' => 'string|max:150',
             'specialization' => [Rule::in($this->specializations)],
             'qualification' => ['nullable', Rule::in($this->qualifications)],
-            'phone' => 'string',
-            'consultation_fee' => 'nullable|numeric|min:0',
-            'email' => 'nullable|email',
-            'license_number' => ['string', Rule::unique('doctors')->ignore($doctor->id)],
+            'phone' => 'string|max:30',
+            'consultation_fee' => 'nullable|numeric|decimal:0,2|min:0|max:99999999.99',
+            'email' => 'nullable|email|max:150',
+            'license_number' => ['sometimes', 'required', 'string', 'max:80', Rule::unique('doctors')->ignore($doctor->id)],
             'experience_years' => 'sometimes|required|integer|min:0|max:80',
             'bio' => 'nullable|string',
             'status' => [Rule::in(['Active', 'Inactive'])],
-            'user_id' => 'nullable|exists:users,id',
+            'user_id' => ['sometimes', 'required', 'integer', Rule::exists('users', 'id')->where('role', 'Doctor'), Rule::unique('doctors', 'user_id')->ignore($doctor->id)],
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072'
         ]);
 
         if (!empty($validated['user_id'])) {
             $validated['full_name'] = User::findOrFail($validated['user_id'])->full_name;
         }
+
+        if (array_key_exists('consultation_fee', $validated)) $validated['consultation_fee'] ??= 0;
 
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('doctors', 'public');

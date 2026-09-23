@@ -6,6 +6,7 @@ import Alert from '../components/ui/Alert';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ReceiptModal from '../components/ui/ReceiptModal';
 import { money } from '../utils/formatters';
+import { validateFields } from '../utils/validation';
 import {
   BarChart2, Boxes, CalendarDays, Download, FileText,
   History, Minus, PackagePlus, Pill, Plus, Printer, RefreshCw,
@@ -96,6 +97,11 @@ function MedicineForm({ initial, onClose, onSaved }) {
 
   const save = async (event) => {
     event.preventDefault();
+    const errors = validateFields([
+      ...fields.map(([name, label, required, type = 'text']) => ({ name, label, required, type, ...(type === 'number' ? { min: 0, max: ['quantity', 'reorder_level'].includes(name) ? 2147483647 : 99999999.99, step: ['quantity', 'reorder_level'].includes(name) ? 1 : 0.01 } : {}) })),
+      { name: 'image', label: 'Medicine image', type: 'file', accept: 'image/*', maxBytes: 2 * 1024 * 1024 },
+    ], form);
+    if (Object.keys(errors).length) return setError(Object.values(errors).join(' '));
     setSaving(true);
     setError('');
     try {
@@ -139,8 +145,8 @@ function MedicineForm({ initial, onClose, onSaved }) {
     ['supplier', 'Supplier', true],
     ['batch_number', 'Batch Number'],
     ['barcode', 'Barcode'],
-    ['buying_price', 'Buying Price'],
-    ['unit_price', 'Selling Price', true],
+    ['buying_price', 'Buying Price', false, 'number'],
+    ['unit_price', 'Selling Price', true, 'number'],
     ['quantity', 'Quantity', true, 'number'],
     ['reorder_level', 'Minimum Stock', true, 'number'],
     ['expiry_date', 'Expiry Date', true, 'date'],
@@ -162,6 +168,9 @@ function MedicineForm({ initial, onClose, onSaved }) {
                 <input
                   required={required}
                   type={type}
+                  min={type === 'number' ? 0 : undefined}
+                  max={type === 'number' ? (['quantity', 'reorder_level'].includes(key) ? 2147483647 : 99999999.99) : undefined}
+                  step={type === 'number' ? (['quantity', 'reorder_level'].includes(key) ? 1 : 0.01) : undefined}
                   value={form[key] ?? ''}
                   onChange={(e) => set(key, e.target.value)}
                   className="w-full rounded-lg px-3 py-2 text-sm outline-none"
@@ -349,6 +358,9 @@ export default function Pharmacy() {
   });
 
   const addToCart = (medicine, qty = 1) => {
+    if (patientId && !['Accepted', 'Approved'].includes(lookups?.patients?.find((p) => String(p.id) === String(patientId))?.status)) {
+      return setError('Only Accepted or Approved patients can receive medicines.');
+    }
     setCart((prev) => {
       const idx = prev.findIndex((item) => item.medicine_id === medicine.id);
       if (idx >= 0) {
@@ -383,7 +395,19 @@ export default function Pharmacy() {
     : medicines.slice(0, 8);
 
   const checkout = async () => {
+    if (patientId && !['Accepted', 'Approved'].includes(lookups?.patients?.find((p) => String(p.id) === String(patientId))?.status)) {
+      return setError('Only Accepted or Approved patients can receive medicines.');
+    }
     if (!cart.length) return setError('Cart is empty.');
+    if (cart.some((item) => !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1 || Number(item.quantity) > Number(item.stock))) {
+      return setError('Medicine quantities must be whole numbers greater than zero and cannot exceed available stock.');
+    }
+    const errors = validateFields([
+      { name: 'discount', label: 'Discount', type: 'number', min: 0, max: discountType === 'Percentage' ? 100 : subtotal, step: 0.01 },
+      { name: 'tax', label: 'Tax percentage', type: 'number', min: 0, max: 100, step: 0.01 },
+      { name: 'account', label: 'Mobile account', required: isMobileMethod, maxLength: 30 },
+    ], { discount: discountValue, tax: taxPercent, account: accountNo });
+    if (Object.keys(errors).length) return setError(Object.values(errors).join(' '));
     setSaving(true);
     setError('');
     setMessage('');
@@ -435,6 +459,9 @@ export default function Pharmacy() {
 
   const proceedPrescriptionPayment = (prescription = selectedPrescription) => {
     if (!prescription) return;
+    if (prescription.patient_id && !['Accepted', 'Approved'].includes(prescription.patient?.status)) {
+      return setError('This patient must be Accepted or Approved before prescription medicines can be added.');
+    }
     setPrescriptionContext(prescription);
     setPatientId(String(prescription.patient_id ?? ''));
     setCustomerName(prescription.patient?.full_name ?? '');
@@ -459,6 +486,9 @@ export default function Pharmacy() {
     const patient = (lookups?.patients ?? []).find((item) => String(item.id) === String(value));
     setCustomerName(patient?.full_name ?? '');
     if (!value) return;
+    if (!['Accepted', 'Approved'].includes(patient?.status)) {
+      return setError('This patient is Pending. A doctor or administrator must approve the patient before adding medicines.');
+    }
 
     const prescription = pendingRx.find((item) => String(item.patient_id) === String(value));
     if (prescription) {

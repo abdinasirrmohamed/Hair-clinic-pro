@@ -13,7 +13,6 @@ use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\PharmacySale;
-use App\Models\Treatment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -48,7 +47,6 @@ class ReportController extends Controller
                 'payments' => (clone $paymentQuery)->count(),
                 'medicines' => Medicine::count(),
                 'lab_requests' => LabRequest::whereBetween('request_date', [$from->toDateString(), $to->toDateString()])->count(),
-                'treatments' => Treatment::whereBetween('treatment_date', [$from->toDateString(), $to->toDateString()])->count(),
                 'clinic_revenue' => (float) $revenue,
                 'pharmacy_revenue' => (float) $pharmacyRevenue,
                 'expenses' => (float) $expenses,
@@ -141,9 +139,9 @@ class ReportController extends Controller
                     fputcsv($out, [$row['doctor'], $row['specialization'], $row['status'], $row['appointments'], $row['completed'], $row['revenue']]);
                 }
             } elseif ($reportType === 'patients') {
-                fputcsv($out, ['Patient', 'Phone', 'Visits', 'Appointments', 'Treatments', 'Prescriptions', 'Lab Tests', 'Payments']);
+                fputcsv($out, ['Patient', 'Phone', 'Visits', 'Appointments', 'Prescriptions', 'Lab Tests', 'Payments']);
                 foreach ($this->patientReports($from, $to, $filters) as $row) {
-                    fputcsv($out, [$row['patient'], $row['phone'], $row['visits'], $row['appointments_count'], $row['treatments'], $row['prescriptions'], $row['lab_tests'], $row['payments']]);
+                    fputcsv($out, [$row['patient'], $row['phone'], $row['visits'], $row['appointments_count'], $row['prescriptions'], $row['lab_tests'], $row['payments']]);
                 }
             } elseif ($reportType === 'medicines') {
                 fputcsv($out, ['Medicine', 'Category', 'Stock', 'Reorder', 'Expired', 'Sold Qty', 'Revenue']);
@@ -424,7 +422,6 @@ class ReportController extends Controller
             ->get()
             ->map(function (Patient $patient) use ($from, $to) {
                 $appointments = Appointment::where('patient_id', $patient->id)->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()]);
-                $treatments = Treatment::where('patient_id', $patient->id)->whereBetween('treatment_date', [$from->toDateString(), $to->toDateString()]);
                 $labs = LabRequest::where('patient_id', $patient->id)->whereBetween('request_date', [$from->toDateString(), $to->toDateString()]);
                 $payments = Payment::where('patient_id', $patient->id)->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
 
@@ -434,7 +431,6 @@ class ReportController extends Controller
                     'visits' => (clone $appointments)->count(),
                     'appointments_count' => (clone $appointments)->count(),
                     'appointments' => (clone $appointments)->with(['doctor', 'payment'])->latest('appointment_date')->get(),
-                    'treatments' => (clone $treatments)->count(),
                     'prescriptions' => $patient->prescriptions()->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count(),
                     'lab_tests' => (clone $labs)->count(),
                     'payments' => (float) (clone $payments)->whereIn('payment_status', ['Paid', 'Partial'])->sum('amount'),
@@ -470,10 +466,6 @@ class ReportController extends Controller
             ->limit(100)
             ->get()
             ->map(function (Appointment $appointment) {
-                $treatments = Treatment::where('patient_id', $appointment->patient_id)
-                    ->whereDate('treatment_date', $appointment->appointment_date)
-                    ->pluck('treatment_name')
-                    ->all();
                 $medicines = $appointment->patient?->prescriptions()
                     ->with('medicines.medicine')
                     ->whereDate('created_at', $appointment->appointment_date)
@@ -501,7 +493,6 @@ class ReportController extends Controller
                     'time' => $appointment->appointment_time,
                     'status' => $appointment->status,
                     'service' => $appointment->reason,
-                    'treatments' => implode(', ', $treatments),
                     'medicines' => implode(', ', $medicines),
                     'lab_tests' => implode(', ', $labs),
                 ];

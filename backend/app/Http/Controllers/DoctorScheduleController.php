@@ -20,20 +20,13 @@ class DoctorScheduleController extends Controller
             'schedules' => $doctor->schedules,
             'blocked_dates' => $doctor->blockedDates,
         ]);
-        $keys = collect($validated['schedules'])
-            ->map(fn ($row) => $row['day_of_week'].'|'.$row['shift']);
-        if ($keys->duplicates()->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'schedules' => ['The same working day and shift cannot be added more than once.'],
-            ]);
-        }
     }
 
     public function update(Request $request, Doctor $doctor): JsonResponse
     {
         $validated = $request->validate([
             'schedules' => 'required|array',
-            'schedules.*.id' => 'nullable|integer|exists:doctor_schedules,id',
+            'schedules.*.id' => ['nullable', 'integer', 'distinct', Rule::exists('doctor_schedules', 'id')->where('doctor_id', $doctor->id)],
             'schedules.*.day_of_week' => ['required', Rule::in(['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'])],
             'schedules.*.shift' => ['required', Rule::in(['Morning', 'Afternoon'])],
             'schedules.*.start_time' => 'required|date_format:H:i',
@@ -43,6 +36,18 @@ class DoctorScheduleController extends Controller
         ]);
 
         DB::transaction(function () use ($doctor, $validated) {
+            $keys = collect($validated['schedules'])->map(fn ($row) => $row['day_of_week'].'|'.$row['shift']);
+            if ($keys->duplicates()->isNotEmpty()) {
+                throw ValidationException::withMessages(['schedules' => 'The same working day and shift cannot be added more than once.']);
+            }
+            foreach ($validated['schedules'] as $row) {
+                $duplicate = $doctor->schedules()->where('day_of_week', $row['day_of_week'])->where('shift', $row['shift'])
+                    ->when(!empty($row['id']), fn ($q) => $q->whereKeyNot($row['id']))->exists();
+                if ($duplicate) throw ValidationException::withMessages(['schedules' => 'A schedule already exists for this working day and shift.']);
+                if (\Carbon\Carbon::parse($row['start_time'])->diffInMinutes(\Carbon\Carbon::parse($row['end_time'])) < $row['slot_minutes']) {
+                    throw ValidationException::withMessages(['schedules' => 'The shift must be long enough for at least one appointment slot.']);
+                }
+            }
             foreach ($validated['schedules'] as $scheduleData) {
                 $schedule = !empty($scheduleData['id'])
                     ? $doctor->schedules()->findOrFail($scheduleData['id'])
@@ -81,7 +86,7 @@ class DoctorScheduleController extends Controller
 
     private function validateSchedule(Request $request, ?DoctorSchedule $schedule = null): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'day_of_week' => ['required', Rule::in(['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'])],
             'shift' => [
                 'required',
@@ -95,6 +100,10 @@ class DoctorScheduleController extends Controller
             'slot_minutes' => 'required|integer|min:5|max:240',
             'is_working' => 'required|boolean',
         ]);
+        if (\Carbon\Carbon::parse($validated['start_time'])->diffInMinutes(\Carbon\Carbon::parse($validated['end_time'])) < $validated['slot_minutes']) {
+            throw ValidationException::withMessages(['slot_minutes' => 'The shift must be long enough for at least one appointment slot.']);
+        }
+        return $validated;
     }
 
     public function blockedDates(Doctor $doctor): JsonResponse
@@ -107,7 +116,7 @@ class DoctorScheduleController extends Controller
         $validated = $request->validate([
             'block_date' => 'required|date',
             'block_type' => 'required|string|in:Leave,Blocked',
-            'reason' => 'nullable|string',
+            'reason' => 'nullable|string|max:255',
         ]);
 
         $validated['doctor_id'] = $doctor->id;

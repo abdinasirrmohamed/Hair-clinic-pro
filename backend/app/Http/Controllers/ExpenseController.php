@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\PharmacySale;
-use App\Models\Treatment;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,8 +60,8 @@ class ExpenseController extends Controller
         $validated = $request->validate([
             'category' => ['required', Rule::in($this->categories)],
             'expense_date' => 'required|date',
-            'amount' => 'required|numeric|min:0.01',
-            'vendor' => 'nullable|string',
+            'amount' => 'required|numeric|decimal:0,2|min:0.01|max:99999999.99',
+            'vendor' => 'nullable|string|max:150',
             'description' => 'nullable|string',
             'receipt' => 'nullable|image|max:3072'
         ]);
@@ -89,9 +88,10 @@ class ExpenseController extends Controller
         $validated = $request->validate([
             'category' => [Rule::in($this->categories)],
             'expense_date' => 'date',
-            'amount' => 'numeric',
-            'vendor' => 'nullable|string',
+            'amount' => 'sometimes|required|numeric|decimal:0,2|min:0.01|max:99999999.99',
+            'vendor' => 'nullable|string|max:150',
             'description' => 'nullable|string',
+            'receipt' => 'nullable|image|max:3072',
         ]);
 
         if ($request->hasFile('receipt')) {

@@ -87,8 +87,8 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'username' => 'required|string|unique:users',
-            'full_name' => 'required|string',
+            'username' => 'required|string|unique:users|max:100',
+            'full_name' => 'required|string|max:150',
             'role' => ['required', Rule::in($this->roles)],
             'password' => 'required|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'status' => ['nullable', Rule::in(['Active', 'Inactive'])],
@@ -117,8 +117,8 @@ class UserController extends Controller
     public function update(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'username' => ['string', Rule::unique('users')->ignore($user->id)],
-            'full_name' => 'string',
+            'username' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('users')->ignore($user->id)],
+            'full_name' => 'string|max:150',
             'role' => [Rule::in($this->roles)],
             'password' => 'nullable|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'status' => [Rule::in(['Active', 'Inactive'])],
@@ -161,8 +161,8 @@ class UserController extends Controller
         $user = $request->user();
         
         $validated = $request->validate([
-            'full_name' => 'required|string',
-            'old_password' => 'nullable|string',
+            'full_name' => 'required|string|max:150',
+            'old_password' => 'required_with:password|nullable|string',
             'password' => 'nullable|string|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);

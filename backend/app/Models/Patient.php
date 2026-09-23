@@ -23,6 +23,7 @@ class Patient extends Model
         'address',
         'medical_notes',
         'assigned_doctor_id',
+        'status',
     ];
 
     protected $casts = [
@@ -31,6 +32,17 @@ class Patient extends Model
     ];
 
     protected $appends = ['patient_code'];
+
+    protected $attributes = ['status' => 'Pending'];
+
+    public function assertCanReceivePrescription(): void
+    {
+        if (!in_array($this->status, ['Accepted', 'Approved'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'patient_id' => 'This patient is '.$this->status.'. Only Accepted or Approved patients can receive prescriptions or medicines.',
+            ]);
+        }
+    }
 
     public function getPatientCodeAttribute(): string
     {

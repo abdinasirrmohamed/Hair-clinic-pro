@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { homeRoute, pharmacyRedirect } from './utils/homeRoute';
 import { useAuth } from './context/AuthContext';
 import Shell from './components/layout/Shell';
 import { PageLoader } from './components/ui/LoadingSpinner';
@@ -11,7 +12,6 @@ import Doctors            from './pages/Doctors';
 import Users              from './pages/Users';
 import Appointments       from './pages/Appointments';
 import DoctorAppointments from './pages/DoctorAppointments';
-import Treatments         from './pages/Treatments';
 import Followups          from './pages/Followups';
 import Payments           from './pages/Payments';
 import Finance            from './pages/Finance';
@@ -28,9 +28,18 @@ import Settings           from './pages/Settings';
 /* ── Guard: redirect to /login if not authenticated ── */
 function RequireAuth({ children }) {
   const { bootstrap, loading } = useAuth();
+  const { pathname } = useLocation();
   if (loading) return <PageLoader />;
   if (!bootstrap) return <Navigate to="/login" replace />;
+  const redirect = pharmacyRedirect(bootstrap.user, pathname);
+  if (redirect) return <Navigate to={redirect} replace />;
   return children;
+}
+
+function HomeRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  return <Navigate to={user ? homeRoute(user) : '/login'} replace />;
 }
 
 /* ── Guard: redirect authenticated users away from /login ── */
@@ -38,11 +47,7 @@ function GuestOnly({ children }) {
   const { bootstrap, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (bootstrap) {
-    const redirect = bootstrap.user?.role === 'Pharmacy User'
-      ? '/pharmacy/dashboard'
-      : bootstrap.user?.role === 'Lab User'
-        ? '/laboratory'
-        : '/dashboard';
+    const redirect = homeRoute(bootstrap.user);
     return <Navigate to={redirect} replace />;
   }
   return children;
@@ -66,14 +71,13 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<HomeRedirect />} />
         <Route path="dashboard"          element={<Dashboard />} />
         <Route path="patients"           element={<Patients />} />
         <Route path="doctors"            element={<Doctors />} />
         <Route path="users"              element={<Users />} />
         <Route path="appointments"       element={<Appointments />} />
         <Route path="doctor-appointments"element={<DoctorAppointments />} />
-        <Route path="treatments"         element={<Treatments />} />
         <Route path="followups"          element={<Followups />} />
         <Route path="payments"           element={<Payments />} />
         <Route path="finance"            element={<Finance />} />
@@ -90,7 +94,7 @@ export default function App() {
       </Route>
 
       {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 }

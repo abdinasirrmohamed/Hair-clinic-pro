@@ -25,7 +25,7 @@ function Input({ definition, value, onChange, lookups }) {
     return (
       <select {...common}>
         <option value="">Select...</option>
-        {rows.map((row) => <option value={row.id} key={row.id}>{row.full_name || row.medicine_name || row.treatment_name || `${row.appointment_date} (#${row.id})`}</option>)}
+        {rows.map((row) => <option value={row.id} key={row.id}>{row.full_name || row.medicine_name || `${row.appointment_date} (#${row.id})`}</option>)}
       </select>
     );
   }

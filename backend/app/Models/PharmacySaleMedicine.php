@@ -21,6 +21,7 @@ class PharmacySaleMedicine extends Model
         'frequency',
         'instructions',
         'unit_price',
+        'unit_cost',
         'subtotal',
     ];
 

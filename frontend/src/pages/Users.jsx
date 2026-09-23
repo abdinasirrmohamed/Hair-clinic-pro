@@ -5,6 +5,7 @@ import Alert from '../components/ui/Alert';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Modal from '../components/ui/Modal';
 import PasswordInput from '../components/ui/PasswordInput';
+import { passwordPattern, passwordHelp } from '../utils/validation';
 import { CheckSquare, Edit, Plus, RefreshCw, Search, Shield, Trash2 } from 'lucide-react';
 
 const roles = ['Administrator', 'Receptionist', 'Doctor', 'Inventory Officer', 'Pharmacy User', 'Lab User'];
@@ -20,7 +21,6 @@ const moduleLabels = {
   payments: 'Payments',
   finance: 'Finance',
   audit_logs: 'Audit Logs',
-  treatments: 'Treatments',
   followups: 'Follow-Ups',
   inventory: 'Inventory',
   pharmacy: 'Pharmacy',
@@ -92,7 +92,7 @@ export default function Users() {
       ...user,
       password: '',
       module_permissions: Array.isArray(user.module_permissions)
-        ? user.module_permissions
+        ? user.module_permissions.filter((module) => allModules.includes(module))
         : defaultRolePermissions(user.role, rolePermissions),
     });
   };
@@ -166,7 +166,7 @@ export default function Users() {
               <tbody>
                 {filtered.map((user) => {
                   const permissions = Array.isArray(user.module_permissions)
-                    ? user.module_permissions
+                    ? user.module_permissions.filter((module) => allModules.includes(module))
                     : defaultRolePermissions(user.role, rolePermissions);
                   return (
                     <tr key={user.id} style={{ borderBottom: '1px solid var(--clr-border)' }}>
@@ -322,6 +322,9 @@ function UserEditor({ user, allModules, rolePermissions, saving, setSaving, onCl
             <span className="text-xs font-semibold" style={{ color: 'var(--clr-muted)' }}>{editing ? 'New Password (optional)' : 'Password'}</span>
             <PasswordInput
               required={!editing}
+              minLength={8}
+              pattern={passwordPattern}
+              title={passwordHelp}
               value={form.password ?? ''}
               onChange={(e) => set('password', e.target.value)}
               placeholder="Strong password: upper, lower, number, symbol"

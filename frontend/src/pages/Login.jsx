@@ -1,3 +1,4 @@
+import { homeRoute } from '../utils/homeRoute';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +20,7 @@ export default function Login() {
     setError('');
     try {
       const data = await login(form.username, form.password);
-      navigate(data?.redirect || '/dashboard', { replace: true });
+      navigate(data?.user?.role === 'Pharmacy User' ? homeRoute(data.user) : (data?.redirect || homeRoute(data?.user)), { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

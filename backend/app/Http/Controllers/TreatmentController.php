@@ -29,7 +29,7 @@ class TreatmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
+            'patient_id' => 'integer|required|exists:patients,id',
             'treatment_name' => 'required|string',
             'treatment_date' => 'required|date',
             'treatment_stage' => ['required', Rule::in(['Pre-Treatment Evaluation', 'Surgery', 'Post-Treatment Review'])],
@@ -41,7 +41,7 @@ class TreatmentController extends Controller
             'donor_area_status' => 'nullable|string',
             'recipient_area_status' => 'nullable|string',
             'notes' => 'nullable|string',
-            'usage_medicine_id' => 'nullable|exists:medicines,id',
+            'usage_medicine_id' => 'integer|nullable|exists:medicines,id',
             'usage_quantity' => 'nullable|integer|min:1',
             'pre_op_photo' => 'nullable|image|max:3072',
             'post_op_photo' => 'nullable|image|max:3072',

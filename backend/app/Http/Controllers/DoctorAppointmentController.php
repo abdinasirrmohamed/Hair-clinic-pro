@@ -18,28 +18,9 @@ class DoctorAppointmentController extends Controller
         return Doctor::where('user_id', auth()->id())->value('id');
     }
 
-    private function slotAvailable(int $doctorId, string $date, string $time, ?int $excludeId = null): array
+    private function slotAvailable($doctorId, $date, $time, $excludeId = null): array
     {
-        $dayOfWeek = Carbon::parse($date)->format('l');
-        $schedule = DoctorSchedule::where('doctor_id', $doctorId)->where('day_of_week', $dayOfWeek)->first();
-
-        if (!$schedule || !$schedule->is_working) {
-            return [false, 'Doctor is not working on this day.'];
-        }
-
-        $slot = Carbon::parse($time);
-        if ($slot->lt(Carbon::parse($schedule->start_time)) || $slot->gte(Carbon::parse($schedule->end_time))) {
-            return [false, 'Selected time is outside doctor working hours.'];
-        }
-
-        $exists = Appointment::where('doctor_id', $doctorId)
-            ->where('appointment_date', $date)
-            ->where('appointment_time', $time)
-            ->whereIn('status', ['Pending', 'Approved'])
-            ->when($excludeId, fn ($query) => $query->where('id', '!=', $excludeId))
-            ->exists();
-
-        return $exists ? [false, 'Slot is already booked.'] : [true, 'Available'];
+        return \App\Services\AppointmentAvailability::check($doctorId, (string) $date, (string) $time, $excludeId);
     }
 
     public function index(Request $request): JsonResponse
@@ -76,10 +57,10 @@ class DoctorAppointmentController extends Controller
         $doctorId = $this->getDoctorId();
 
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
+            'patient_id' => 'integer|required|exists:patients,id',
             'appointment_date' => 'required|date|after_or_equal:today',
-            'appointment_time' => 'required',
-            'reason' => 'required|string',
+            'appointment_time' => 'required|date_format:H:i,H:i:s',
+            'reason' => 'required|string|max:255',
         ]);
 
         $validated['doctor_id'] = $doctorId;
@@ -105,8 +86,8 @@ class DoctorAppointmentController extends Controller
 
         $validated = $request->validate([
             'appointment_date' => 'date|after_or_equal:today',
-            'appointment_time' => 'string',
-            'reason' => 'string',
+            'appointment_time' => 'sometimes|required|date_format:H:i,H:i:s',
+            'reason' => 'string|max:255',
             'notes' => 'nullable|string',
         ]);
 
@@ -134,7 +115,11 @@ class DoctorAppointmentController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        if ($validated['status'] === 'Approved') $validated['approved_at'] = now();
+        if ($validated['status'] === 'Approved') {
+            [$available, $message] = $this->slotAvailable($appointment->doctor_id, $appointment->appointment_date, $appointment->appointment_time, $appointment->id);
+            if (!$available) return response()->json(['message' => $message], 422);
+            $validated['approved_at'] = now();
+        }
         if ($validated['status'] === 'Rejected') $validated['rejected_at'] = now();
         if ($validated['status'] === 'Completed') $validated['completed_at'] = now();
 

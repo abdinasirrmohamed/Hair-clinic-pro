@@ -175,7 +175,7 @@ export default function Inventory() {
 
               <div>
                 <label className={labelClass} style={{ color: 'var(--clr-section)' }}>Quantity</label>
-                <input type="number" min="1" style={inputStyle} value={move.quantity}
+                <input required type="number" min="1" max="2147483647" step="1" style={inputStyle} value={move.quantity}
                   onChange={(e) => setMove({ ...move, quantity: e.target.value })}
                   onFocus={(e) => Object.assign(e.target.style, focusStyle)}
                   onBlur={(e) => { e.target.style.borderColor = 'var(--clr-border)'; e.target.style.boxShadow = 'none'; }} />
@@ -184,7 +184,7 @@ export default function Inventory() {
               {move.movement_type === 'stock-in' ? (
                 <div>
                   <label className={labelClass} style={{ color: 'var(--clr-section)' }}>Unit Cost ($)</label>
-                  <input type="number" min="0" step="0.01" style={inputStyle} value={move.unit_cost}
+                  <input required type="number" min="0" max="99999999.99" step="0.01" style={inputStyle} value={move.unit_cost}
                     onChange={(e) => setMove({ ...move, unit_cost: e.target.value })}
                     onFocus={(e) => Object.assign(e.target.style, focusStyle)}
                     onBlur={(e) => { e.target.style.borderColor = 'var(--clr-border)'; e.target.style.boxShadow = 'none'; }} />

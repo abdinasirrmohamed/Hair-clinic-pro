@@ -106,7 +106,7 @@ export default function Laboratory() {
             <select value={testForm.category} onChange={(e) => setTestForm({ ...testForm, category: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
               {['Hair & Scalp Lab', 'Blood Test', 'Hormone Test', 'Allergy Test', 'Biopsy', 'Imaging'].map((item) => <option key={item}>{item}</option>)}
             </select>
-            <input required type="number" min="0" value={testForm.price} onChange={(e) => setTestForm({ ...testForm, price: e.target.value })} placeholder="Price" className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
+            <input required type="number" min="0" max="99999999.99" step="0.01" value={testForm.price} onChange={(e) => setTestForm({ ...testForm, price: e.target.value })} placeholder="Price" className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
             <select value={testForm.sample_type} onChange={(e) => setTestForm({ ...testForm, sample_type: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
               {['Blood', 'Scalp Swab', 'Hair Sample', 'Skin Tissue', 'Image/Scan', 'No Sample'].map((item) => <option key={item}>{item}</option>)}
             </select>
@@ -139,9 +139,9 @@ export default function Laboratory() {
             </select>
             <select required value={requestForm.lab_test_id} onChange={(e) => setRequestForm({ ...requestForm, lab_test_id: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
               <option value="">Select lab test</option>
-              {tests.map((test) => <option key={test.id} value={test.id}>{test.test_name} - {money(test.price)}</option>)}
+              {tests.filter((test) => test.status === 'Active').map((test) => <option key={test.id} value={test.id}>{test.test_name} - {money(test.price)}</option>)}
             </select>
-            <input type="date" min={new Date().toISOString().slice(0, 10)} value={requestForm.request_date} onChange={(e) => setRequestForm({ ...requestForm, request_date: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
+            <input required type="date" min={new Date().toISOString().slice(0, 10)} value={requestForm.request_date} onChange={(e) => setRequestForm({ ...requestForm, request_date: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()} />
             <select value={requestForm.status} onChange={(e) => setRequestForm({ ...requestForm, status: e.target.value })} className="rounded-lg px-3 py-2 text-sm outline-none" style={inputStyle()}>
               {statuses.map((status) => <option key={status}>{status}</option>)}
             </select>

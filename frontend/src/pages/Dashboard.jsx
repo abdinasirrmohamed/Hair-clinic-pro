@@ -31,7 +31,6 @@ const ICON_MAP = {
   pharmacy_sales_today:   TrendingUp,
   pending_prescriptions:  Activity,
   expenses_month:         Wallet,
-  total_treatments:       Activity,
 };
 
 function ReceptionStat({ value, label, tone = '#2563eb' }) {

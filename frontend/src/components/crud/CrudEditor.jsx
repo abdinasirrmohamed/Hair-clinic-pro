@@ -4,6 +4,7 @@ import Modal from '../ui/Modal';
 import FormField from '../ui/FormField';
 import Alert from '../ui/Alert';
 import { Save } from 'lucide-react';
+import { validateFields } from '../../utils/validation';
 
 const ageFromDateOfBirth = (dateOfBirth) => {
   if (!dateOfBirth) return '';
@@ -23,18 +24,31 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
   const [files,  setFiles]  = useState({});
   const [error,  setError]  = useState('');
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const fields = config.fields.filter(
     (f) => !(f.editOnly && !editing) && f.type !== 'hidden',
-  );
+  ).map((field) => field.name === 'account_no' && config.endpoint === '/payments'
+    ? { ...field, required: ['EVC Plus', 'Zaad', 'Sahal'].includes(form.payment_method) } : field);
+  const filteredLookups = config.endpoint === '/payments' ? {
+    ...lookups,
+    appointments: (lookups?.appointments ?? []).filter((row) => String(row.patient_id) === String(form.patient_id)),
+  } : lookups;
 
   const handleChange = (e) => {
     const { name, value, files: selected } = e.target;
-    if (selected && selected[0]) {
-      setFiles((prev) => ({ ...prev, [name]: selected[0] }));
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (selected) {
+      setFiles((prev) => {
+        const next = { ...prev };
+        if (selected[0]) next[name] = selected[0];
+        else delete next[name];
+        return next;
+      });
     } else {
       setForm((prev) => {
         const next = { ...prev, [name]: value };
+        if (name === 'patient_id' && config.endpoint === '/payments') next.appointment_id = '';
         if (name === 'date_of_birth' && config.endpoint === '/patients') {
           next.age = ageFromDateOfBirth(value);
         }
@@ -45,6 +59,15 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
 
   const submit = async (e) => {
     e.preventDefault();
+    const errors = validateFields(fields, { ...form, ...files });
+    if (config.endpoint === '/payments' && ['EVC Plus', 'Zaad', 'Sahal'].includes(form.payment_method) && form.payment_status !== 'Paid') {
+      errors.payment_status = 'Mobile wallet payments must be fully paid.';
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setError(Object.values(errors).join(' '));
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -73,6 +96,7 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
       onSaved(editing ? 'Record updated successfully.' : 'Record created successfully.', response?.data, !editing);
     } catch (err) {
       setError(err.message);
+      setFieldErrors(Object.fromEntries(Object.entries(err.errors ?? {}).map(([key, messages]) => [key, messages.join(' ')])));
     } finally {
       setSaving(false);
     }
@@ -92,7 +116,8 @@ export default function CrudEditor({ config, record, lookups, onClose, onSaved }
               definition={def}
               value={form[def.name]}
               onChange={handleChange}
-              lookups={lookups}
+              lookups={filteredLookups}
+              error={fieldErrors[def.name]}
             />
           ))}
         </div>

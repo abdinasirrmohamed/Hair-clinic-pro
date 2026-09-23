@@ -143,7 +143,18 @@ npm run build
 
 The current regression suite covers authentication and permissions, doctor schedule uniqueness, receptionist schedule access, doctor-name synchronization, patient DOB/age validation, full/partial payment calculations, WaafiPay logging, SMS delivery/idempotency, multi-medicine prescriptions, patient-specific pharmacy dispensing, stock-safe sales, and receipts.
 
-Current verified result: **21 backend tests, 73 assertions, and a successful frontend production build**.
+Current verified result: **70 backend tests (502 assertions), 10 frontend tests, and a successful frontend production build**.
+
+Run frontend validation and routing tests with `node --test src/utils/validation.test.js src/utils/homeRoute.test.js` from `frontend`.
+
+## Patient approval and validation update
+
+- Patient registration requires Date of Birth, Address, and Assigned Doctor.
+- Patient approval is separate from appointment status. New and existing patients default to Pending when the approval migration is applied.
+- An administrator or the assigned doctor can use Patients → Edit → Approval Status to mark a patient Accepted or Approved.
+- Pending patients cannot receive prescriptions, prescription edits, pharmacy sales, dispensing, or medicine invoices through the UI or API.
+- Shared forms and API validation enforce required fields, numeric limits, money precision, image uploads, and valid references. Appointment edits check working slots, conflicts, and blocked dates.
+- Before updating an existing installation, back up the database with `php artisan clinic:backup`, then run `php artisan migrate --force`. Existing patients require review before prescribing.
 
 ## Production deployment
 

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Appointment;
-use App\Models\Treatment;
 use App\Models\Payment;
 use App\Models\Expense;
 use App\Models\InventoryItem;
@@ -29,7 +28,6 @@ class DashboardController extends Controller
             $data['total_doctors'] = Doctor::count();
             $data['total_patients'] = Patient::count();
             $data['total_appointments'] = Appointment::count();
-            $data['total_treatments'] = Treatment::count();
             $data['total_inventory_items'] = InventoryItem::count();
             
             $data['revenue_today'] = Payment::whereIn('payment_status', ['Paid', 'Partial'])->whereDate('created_at', today())->sum('amount') +

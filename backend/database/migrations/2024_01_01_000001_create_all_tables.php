@@ -21,6 +21,12 @@ return new class extends Migration
         if ($existingTables !== []) {
             $missingTables = array_values(array_diff($this->expectedTables(), $existingTables));
 
+            // The legacy SQL import contains the clinic tables but predates Sanctum.
+            if ($missingTables === ['personal_access_tokens']) {
+                $this->createPersonalAccessTokensTable();
+                return;
+            }
+
             throw new RuntimeException(
                 'The database already contains part of the Hair Clinic Pro schema. '.
                 'Missing tables: '.implode(', ', $missingTables).'. '.
@@ -411,6 +417,11 @@ return new class extends Migration
         });
 
         // ── SANCTUM: Personal Access Tokens ────────────────
+        $this->createPersonalAccessTokensTable();
+    }
+
+    private function createPersonalAccessTokensTable(): void
+    {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
             $table->morphs('tokenable');

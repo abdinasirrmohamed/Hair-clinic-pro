@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Modal from '../components/ui/Modal';
 
 const emptyMedicine = () => ({ medicine_id: '', quantity: 1, frequency: '', instructions: '' });
+const approved = (patient) => ['Accepted', 'Approved'].includes(patient?.status);
 
 export default function Prescriptions() {
   const { lookups, refresh } = useAuth();
@@ -17,6 +18,8 @@ export default function Prescriptions() {
   const [success, setSuccess] = useState('');
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ patient_id: '', doctor_id: '', medicines: [emptyMedicine()] });
+  const patient = lookups?.patients?.find((row) => String(row.id) === String(form.patient_id));
+  const canPrescribe = approved(patient);
 
   const load = async () => {
     setLoading(true);
@@ -40,6 +43,10 @@ export default function Prescriptions() {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (!canPrescribe) {
+      setError('Only Accepted or Approved patients can receive prescriptions or medicines.');
+      return;
+    }
     setSaving(true);
     setError('');
     setSuccess('');
@@ -85,15 +92,16 @@ export default function Prescriptions() {
           {[['patient_id', 'Patient', lookups?.patients ?? []], ['doctor_id', 'Doctor', lookups?.doctors ?? []]].map(([key, label, options]) => (
             <label key={key} className="space-y-1">
               <span className="text-xs font-semibold" style={{ color: 'var(--clr-muted)' }}>{label}</span>
-              <select required className={inputClass} style={inputStyle} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })}>
+              <select required className={inputClass} style={inputStyle} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value, ...(key === 'patient_id' ? { medicines: [emptyMedicine()] } : {}) })}>
                 <option value="">Select {label.toLowerCase()}</option>
-                {options.map((option) => <option key={option.id} value={option.id}>{option.full_name}</option>)}
+                {options.map((option) => <option key={option.id} value={option.id}>{option.full_name}{key === 'patient_id' ? ` (${option.status ?? 'Pending'})` : ''}</option>)}
               </select>
             </label>
           ))}
         </div>
 
-        <div className="space-y-3">
+        {!canPrescribe && <Alert message={patient ? `This patient is ${patient.status ?? 'Pending'}. A doctor or administrator must accept or approve the patient before adding medicines.` : 'Select an Accepted or Approved patient before adding medicines.'} />}
+        <fieldset disabled={!canPrescribe || saving} className="space-y-3 disabled:opacity-50">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold" style={{ color: 'var(--clr-text)' }}>Medicines</h2>
             <button type="button" onClick={() => setForm({ ...form, medicines: [...form.medicines, emptyMedicine()] })} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-white" style={{ background: 'var(--clr-accent)' }}>
@@ -114,9 +122,9 @@ export default function Prescriptions() {
               </button>
             </div>
           ))}
-        </div>
+        </fieldset>
         <div className="flex justify-end">
-          <button disabled={saving} className="rounded-lg px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50" style={{ background: 'var(--clr-accent)' }}>
+          <button disabled={saving || !canPrescribe} className="rounded-lg px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50" style={{ background: 'var(--clr-accent)' }}>
             {saving ? 'Saving...' : 'Save Prescription'}
           </button>
         </div>

@@ -21,20 +21,24 @@ class PharmacyInvoiceController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
+            'patient_id' => 'integer|required|exists:patients,id',
             'payment_method' => ['required', Rule::in(['Cash', 'EVC Plus', 'Sahal', 'Bank Transfer'])],
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.medicine_id' => 'required|exists:medicines,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.medicine_id' => 'integer|required|distinct|exists:medicines,id',
+            'items.*.quantity' => 'required|integer|min:1|max:2147483647',
+            'items.*.unit_price' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
         ]);
 
         DB::beginTransaction();
         try {
+            \App\Models\Patient::lockForUpdate()->findOrFail($validated['patient_id'])->assertCanReceivePrescription();
             $totalAmount = 0;
             foreach ($validated['items'] as $item) {
                 $totalAmount += ($item['quantity'] * $item['unit_price']);
+            }
+            if ($totalAmount > 99999999.99) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['items' => 'Invoice total exceeds the supported maximum.']);
             }
 
             $invoice = PharmacyInvoice::create([
@@ -61,6 +65,9 @@ class PharmacyInvoiceController extends Controller
             AuditLogService::log('Created pharmacy invoice', 'Pharmacy', $invoice->id);
 
             return response()->json($invoice, 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error: ' . $e->getMessage()], 422);

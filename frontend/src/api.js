@@ -30,7 +30,10 @@ api.interceptors.response.use(
       ? Object.values(data.errors).flat().join(' ')
       : '';
     const message = errors || data?.message || `Request failed (${err.response?.status ?? 'network'})`;
-    return Promise.reject(new Error(message));
+    const error = new Error(message);
+    error.errors = data?.errors ?? {};
+    error.status = err.response?.status;
+    return Promise.reject(error);
   },
 );
 

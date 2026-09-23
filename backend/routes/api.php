@@ -8,7 +8,6 @@ use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorAppointmentController;
-use App\Http\Controllers\TreatmentController;
 use App\Http\Controllers\FollowupController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PaymentController;
@@ -89,8 +88,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('appointments/{appointment}/cancel', [DoctorAppointmentController::class, 'cancel']);
     });
 
-    // Treatments
-    Route::middleware('module:treatments')->apiResource('treatments', TreatmentController::class);
 
     // Followups
     Route::middleware('module:followups')->apiResource('followups', FollowupController::class);
@@ -123,6 +120,34 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Pharmacy
     Route::middleware('module:pharmacy')->prefix('pharmacy')->group(function () {
+        $stocktakes = \App\Http\Controllers\PharmacyStocktakeController::class;
+        Route::get('stocktakes', [$stocktakes, 'index']);
+        Route::post('stocktakes', [$stocktakes, 'store']);
+        Route::get('stocktakes/{stocktake}', [$stocktakes, 'show']);
+        Route::put('stocktakes/{stocktake}', [$stocktakes, 'update']);
+        Route::post('stocktakes/{stocktake}/submit', [$stocktakes, 'submit']);
+        Route::post('stocktakes/{stocktake}/recount', [$stocktakes, 'recount']);
+        Route::post('stocktakes/{stocktake}/approve', [$stocktakes, 'approve'])->middleware('role:Administrator');
+        Route::get('profit', [\App\Http\Controllers\PharmacyProfitController::class, 'index']);
+        $workflow = \App\Http\Controllers\PharmacyWorkflowController::class;
+        Route::get('alerts', [$workflow, 'alerts']);
+        Route::post('medicines/{medicine}/batches', [$workflow, 'batch']);
+        Route::get('orders', [$workflow, 'orders']);
+        Route::post('orders', [$workflow, 'order']);
+        Route::post('orders/{order}/cancel', [$workflow, 'cancelOrder']);
+        Route::get('payables', [$workflow, 'payables']);
+        Route::post('payables/{purchase}/reconcile', [$workflow, 'reconcile']);
+        Route::post('payables/{purchase}/payments', [$workflow, 'supplierPayment']);
+        Route::get('registers', [$workflow, 'registers']);
+        Route::post('registers', [$workflow, 'openRegister']);
+        Route::post('registers/{register}/close', [$workflow, 'closeRegister']);
+
+        Route::apiResource('customers', \App\Http\Controllers\PharmacyCustomerController::class);
+        Route::get('purchases', [\App\Http\Controllers\PharmacyOperationsController::class, 'purchases']);
+        Route::post('purchases', [\App\Http\Controllers\PharmacyOperationsController::class, 'receive']);
+        Route::post('prescriptions', [\App\Http\Controllers\PharmacyOperationsController::class, 'prescription']);
+        Route::get('reports', [\App\Http\Controllers\PharmacyOperationsController::class, 'reports']);
+        Route::post('sales/{sale}/payments', [\App\Http\Controllers\PharmacyOperationsController::class, 'collectPayment']);
         Route::get('sales', [PharmacySaleController::class, 'index']);
         Route::post('sales', [PharmacySaleController::class, 'store']);
         Route::get('sales/{sale}', [PharmacySaleController::class, 'show']);
@@ -160,6 +185,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Settings
     Route::middleware('module:settings')->group(function () {
+        Route::middleware('role:Administrator')->prefix('backups')->group(function () {
+            Route::get('/', [\App\Http\Controllers\BackupController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\BackupController::class, 'store']);
+            Route::post('verify', [\App\Http\Controllers\BackupController::class, 'verify']);
+            Route::get('download', [\App\Http\Controllers\BackupController::class, 'download']);
+        });
         Route::get('settings', [SystemSettingController::class, 'index']);
         Route::put('settings', [SystemSettingController::class, 'update']);
         Route::get('settings/waafi/status', [WaafiController::class, 'status']);

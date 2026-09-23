@@ -12,7 +12,7 @@ class FollowupController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Followup::with(['patient', 'treatment']);
+        $query = Followup::with(['patient']);
 
         if (auth()->user()->role === 'Doctor') {
             $query->whereHas('patient', function ($q) {
@@ -26,8 +26,7 @@ class FollowupController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'treatment_id' => 'nullable|exists:treatments,id',
+            'patient_id' => 'integer|required|exists:patients,id',
             'followup_date' => 'required|date',
             'status' => ['required', Rule::in(['Scheduled', 'Done', 'Missed'])],
             'result' => 'nullable|string',
@@ -41,7 +40,7 @@ class FollowupController extends Controller
 
     public function show(Followup $followup): JsonResponse
     {
-        $followup->load(['patient', 'treatment']);
+        $followup->load(['patient']);
         return response()->json($followup);
     }
 

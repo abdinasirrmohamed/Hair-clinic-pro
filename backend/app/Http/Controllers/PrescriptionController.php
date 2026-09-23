@@ -14,7 +14,7 @@ class PrescriptionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Prescription::with(['patient', 'doctor', 'medicines.medicine'])->withCount('medicines');
+        $query = Prescription::with(['patient', 'customer', 'doctor', 'medicines.medicine'])->withCount('medicines');
 
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -45,11 +45,11 @@ class PrescriptionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'doctor_id' => 'required|exists:doctors,id',
+            'patient_id' => 'integer|required|exists:patients,id',
+            'doctor_id' => 'integer|required|exists:doctors,id',
             'medicines' => 'required|array|min:1',
-            'medicines.*.medicine_id' => 'required|distinct|exists:medicines,id',
-            'medicines.*.quantity' => 'required|integer|min:1',
+            'medicines.*.medicine_id' => 'integer|required|distinct|exists:medicines,id',
+            'medicines.*.quantity' => 'required|integer|min:1|max:2147483647',
             'medicines.*.frequency' => 'required|string|max:100',
             'medicines.*.instructions' => 'required|string|max:255',
         ]);
@@ -60,6 +60,7 @@ class PrescriptionController extends Controller
 
         DB::beginTransaction();
         try {
+            \App\Models\Patient::lockForUpdate()->findOrFail($validated['patient_id'])->assertCanReceivePrescription();
             $prescription = Prescription::create([
                 'prescription_number' => 'RX-' . date('Ymd') . '-' . rand(1000, 9999),
                 'patient_id' => $validated['patient_id'],
@@ -83,8 +84,11 @@ class PrescriptionController extends Controller
 
             return response()->json([
                 'message' => 'Prescription created successfully.',
-                'prescription' => $prescription->load(['patient', 'doctor', 'medicines.medicine']),
+                'prescription' => $prescription->load(['patient', 'customer', 'doctor', 'medicines.medicine']),
             ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
@@ -93,19 +97,19 @@ class PrescriptionController extends Controller
 
     public function show(Prescription $prescription): JsonResponse
     {
-        $prescription->load(['patient', 'doctor', 'medicines.medicine']);
+        $prescription->load(['patient', 'customer', 'doctor', 'medicines.medicine']);
         return response()->json($prescription);
     }
 
     public function update(Request $request, Prescription $prescription): JsonResponse
     {
-        abort_if(in_array($prescription->status, ['Dispensed', 'Completed'], true), 422, 'A dispensed prescription cannot be edited.');
+        abort_if(in_array($prescription->status, ['Dispensed', 'Completed', 'Partially Dispensed'], true), 422, 'A dispensed prescription cannot be edited.');
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'doctor_id' => 'required|exists:doctors,id',
+            'patient_id' => 'integer|required|exists:patients,id',
+            'doctor_id' => 'integer|required|exists:doctors,id',
             'medicines' => 'required|array|min:1',
-            'medicines.*.medicine_id' => 'required|distinct|exists:medicines,id',
-            'medicines.*.quantity' => 'required|integer|min:1',
+            'medicines.*.medicine_id' => 'integer|required|distinct|exists:medicines,id',
+            'medicines.*.quantity' => 'required|integer|min:1|max:2147483647',
             'medicines.*.frequency' => 'required|string|max:100',
             'medicines.*.instructions' => 'required|string|max:255',
         ]);
@@ -114,6 +118,8 @@ class PrescriptionController extends Controller
         }
 
         DB::transaction(function () use ($prescription, $validated) {
+            $prescription->patient()->lockForUpdate()->first()?->assertCanReceivePrescription();
+            \App\Models\Patient::lockForUpdate()->findOrFail($validated['patient_id'])->assertCanReceivePrescription();
             $prescription->update([
                 'patient_id' => $validated['patient_id'],
                 'doctor_id' => $validated['doctor_id'],
@@ -124,7 +130,7 @@ class PrescriptionController extends Controller
         AuditLogService::log('Updated prescription', 'Prescriptions', $prescription->id);
         return response()->json([
             'message' => 'Prescription updated successfully.',
-            'prescription' => $prescription->load(['patient', 'doctor', 'medicines.medicine']),
+            'prescription' => $prescription->load(['patient', 'customer', 'doctor', 'medicines.medicine']),
         ]);
     }
 }

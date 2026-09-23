@@ -19,28 +19,31 @@ class InventoryMovementController extends Controller
             $query->where('movement_type', $request->movement_type);
         }
 
-        return response()->json($query->paginate(15));
+        return response()->json($query->latest('id')->paginate(25));
     }
 
     public function stockIn(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'medicine_id' => 'required|exists:medicines,id',
-            'quantity' => 'required|integer|min:1',
-            'unit_cost' => 'required|numeric|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'batch_number' => 'nullable|string',
-            'expiry_date' => 'nullable|date',
+            'medicine_id' => 'integer|required|exists:medicines,id',
+            'quantity' => 'required|integer|min:1|max:2147483647',
+            'unit_cost' => 'required|numeric|decimal:0,2|min:0|max:99999999.99',
+            'supplier_id' => 'integer|nullable|exists:suppliers,id',
+            'batch_number' => 'nullable|string|max:100',
+            'expiry_date' => 'nullable|date|after_or_equal:today',
             'invoice' => 'nullable|image|max:3072'
         ]);
 
         DB::beginTransaction();
         try {
-            $medicine = Medicine::findOrFail($validated['medicine_id']);
+            $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
             $oldQuantity = $medicine->quantity;
+            if ($oldQuantity + $validated['quantity'] > 2147483647 || $validated['unit_cost'] * $validated['quantity'] > 99999999.99) {
+                throw new \Exception('Stock quantity or total cost exceeds the supported maximum.');
+            }
             
             $medicine->quantity += $validated['quantity'];
-            $medicine->unit_price = $validated['unit_cost']; // Updating to latest unit cost
+            $medicine->buying_price = $validated['unit_cost'];
             if (!empty($validated['batch_number'])) $medicine->batch_number = $validated['batch_number'];
             if (!empty($validated['expiry_date'])) $medicine->expiry_date = $validated['expiry_date'];
             if (!empty($validated['supplier_id'])) $medicine->supplier_id = $validated['supplier_id'];
@@ -79,15 +82,15 @@ class InventoryMovementController extends Controller
     public function stockOut(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'medicine_id' => 'required|exists:medicines,id',
-            'quantity' => 'required|integer|min:1',
-            'department' => 'nullable|string',
-            'purpose' => 'nullable|string',
+            'medicine_id' => 'integer|required|exists:medicines,id',
+            'quantity' => 'required|integer|min:1|max:2147483647',
+            'department' => 'nullable|string|max:120',
+            'purpose' => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
         try {
-            $medicine = Medicine::findOrFail($validated['medicine_id']);
+            $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
             $oldQuantity = $medicine->quantity;
             
             if ($medicine->quantity < $validated['quantity']) {

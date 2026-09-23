@@ -10,7 +10,17 @@ import api from '../api';
 import { money } from '../utils/formatters';
 
 export default function Patients() {
-  const { lookups, refresh } = useAuth();
+  const { lookups, refresh, user } = useAuth();
+  const canApprove = ['Administrator', 'Doctor'].includes(user?.role);
+  const patientConfig = {
+    ...modules.patients,
+    columns: [...modules.patients.columns, 'status'],
+    labels: { ...modules.patients.labels, status: 'Approval Status' },
+    fields: modules.patients.fields.map((field) =>
+      ['date_of_birth', 'address', 'assigned_doctor_id'].includes(field.name)
+        ? { ...field, required: true } : field),
+  };
+  if (canApprove) patientConfig.fields.push({ name: 'status', label: 'Approval Status', type: 'select', options: ['Pending', 'Accepted', 'Approved'], required: true, editOnly: true });
   const [timeline, setTimeline] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +44,7 @@ export default function Patients() {
       <CrudPage
         title="Patient Management"
         subtitle="Manage records, medical history, and scheduled sessions."
-        config={modules.patients}
+        config={patientConfig}
         lookups={lookups}
         onDataChanged={refresh}
         renderActions={(row) => (
@@ -56,7 +66,7 @@ export default function Patients() {
       {timeline && (
         <Modal
           title={`${timeline.patient.full_name} Timeline`}
-          subtitle="Appointments, payments, prescriptions, and treatments."
+          subtitle="Appointments, payments, prescriptions, and lab tests."
           onClose={() => setTimeline(null)}
         >
           <div className="space-y-3">

@@ -42,15 +42,10 @@ export const modules = {
     createDefaults: { patient_mode: 'existing' },
     fields: [field('patient_mode', 'Patient Mode', 'hidden'), field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('doctor_id', 'Doctor', 'lookup', { lookup: 'doctors' }), field('appointment_date', 'Date', 'date'), field('appointment_time', 'Time', 'time'), field('reason', 'Reason'), field('status', 'Status', 'select', { options: ['Pending', 'Approved', 'Rejected', 'Completed', 'Cancelled'], editOnly: true }), field('notes', 'Notes', 'textarea', { editOnly: true })],
   },
-  treatments: {
-    endpoint: '/treatments', columns: ['patient.full_name', 'treatment_name', 'treatment_date', 'treatment_stage', 'progress', 'cost'],
-    labels: { 'patient.full_name': 'Patient', treatment_name: 'Treatment', treatment_date: 'Date', treatment_stage: 'Stage', progress: 'Progress', cost: 'Cost' },
-    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('treatment_name', 'Treatment Name'), field('treatment_date', 'Date', 'date'), field('treatment_stage', 'Stage', 'select', { options: ['Pre-Treatment Evaluation', 'Surgery', 'Post-Treatment Review'] }), field('progress', 'Progress', 'select', { options: ['Started', 'In Progress', 'Completed'] }), field('cost', 'Cost', 'number'), field('grafts_planned', 'Grafts Planned', 'number'), field('grafts_extracted', 'Grafts Extracted', 'number'), field('grafts_implanted', 'Grafts Implanted', 'number'), field('notes', 'Notes', 'textarea'), field('pre_op_photo', 'Pre-op Photo', 'file'), field('post_op_photo', 'Post-op Photo', 'file')],
-  },
   followups: {
-    endpoint: '/followups', columns: ['patient.full_name', 'treatment.treatment_name', 'followup_date', 'status', 'result'],
-    labels: { 'patient.full_name': 'Patient', 'treatment.treatment_name': 'Treatment', followup_date: 'Date', status: 'Status', result: 'Result' },
-    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('treatment_id', 'Treatment', 'lookup', { lookup: 'treatments' }), field('followup_date', 'Date', 'date'), field('status', 'Status', 'select', { options: ['Scheduled', 'Done', 'Missed'] }), field('result', 'Result / Notes', 'textarea')],
+    endpoint: '/followups', columns: ['patient.full_name', 'followup_date', 'status', 'result'],
+    labels: { 'patient.full_name': 'Patient', followup_date: 'Date', status: 'Status', result: 'Result' },
+    fields: [field('patient_id', 'Patient', 'lookup', { lookup: 'patients' }), field('followup_date', 'Date', 'date'), field('status', 'Status', 'select', { options: ['Scheduled', 'Done', 'Missed'] }), field('result', 'Result / Notes', 'textarea')],
   },
   payments: {
     endpoint: '/payments', noEdit: true, columns: ['patient.full_name', 'amount', 'payment_method', 'payment_status', 'reference_number', 'created_at'],
@@ -74,3 +69,28 @@ export const modules = {
     fields: [field('company_name', 'Company Name'), field('contact_person', 'Contact Person'), field('phone', 'Phone'), field('email', 'Email', 'email'), field('address', 'Address', 'textarea')],
   },
 };
+
+const requiredFields = {
+  users: ['full_name', 'username', 'role'],
+  doctors: ['user_id', 'specialization', 'phone', 'license_number', 'experience_years'],
+  patients: ['full_name', 'phone', 'gender', 'date_of_birth', 'address', 'assigned_doctor_id'],
+  appointments: ['patient_id', 'doctor_id', 'appointment_date', 'appointment_time', 'reason'],
+  followups: ['patient_id', 'followup_date', 'status'],
+  payments: ['patient_id', 'amount', 'payment_method', 'payment_status'],
+  finance: ['expense_date', 'category', 'amount'],
+  inventory: ['medicine_name', 'category', 'expiry_date', 'supplier'],
+  suppliers: ['company_name', 'phone'],
+};
+const textLimits = { full_name: 150, username: 100, phone: 30, email: 150, address: 255, license_number: 80, medicine_name: 150, generic_name: 150, category: 100, batch_number: 100, barcode: 100, supplier: 150, company_name: 150, contact_person: 150, vendor: 150, reference_number: 100, account_no: 30, reason: 255 };
+for (const [name, config] of Object.entries(modules)) {
+  config.fields = config.fields.map((definition) => ({
+    ...(definition.type === 'number' ? { min: 0, max: 99999999.99, step: 0.01 } : {}),
+    ...(['quantity', 'reorder_level'].includes(definition.name) ? { step: 1, max: 2147483647 } : {}),
+    ...(definition.name in textLimits ? { maxLength: textLimits[definition.name] } : {}),
+    ...(name === 'suppliers' && definition.name === 'phone' ? { maxLength: 40 } : {}),
+    ...(definition.type === 'file' ? { accept: 'image/*', maxBytes: 3 * 1024 * 1024 } : {}),
+    ...(definition.name === 'amount' ? { min: 0.01 } : {}),
+    ...definition,
+    required: requiredFields[name]?.includes(definition.name) || definition.required,
+  }));
+}

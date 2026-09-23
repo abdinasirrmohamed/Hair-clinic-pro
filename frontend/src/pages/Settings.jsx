@@ -3,6 +3,7 @@ import { CreditCard, Save, Settings as SettingsIcon } from 'lucide-react';
 import api from '../api';
 import Alert from '../components/ui/Alert';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { DatabaseBackups } from './PharmacyControls';
 
 const fields = [
   ['clinic_name', 'Clinic Name'],
@@ -84,6 +85,7 @@ export default function Settings() {
       </div>
 
       {message.text && <Alert message={message.text} variant={message.type} />}
+      <DatabaseBackups />
 
       <form onSubmit={submit} className="rounded-xl overflow-hidden" style={{ background: 'var(--clr-card)', border: '1px solid var(--clr-border)' }}>
         <div className="px-5 py-4 flex items-center gap-2" style={{ borderBottom: '1px solid var(--clr-border)' }}>
@@ -96,6 +98,11 @@ export default function Settings() {
               <span className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: 'var(--clr-section)' }}>{label}</span>
               <input
                 type={['tax_percent', 'slot_minutes'].includes(name) ? 'number' : 'text'}
+                required={['clinic_name', 'currency', 'slot_minutes'].includes(name)}
+                min={name === 'slot_minutes' ? 5 : name === 'tax_percent' ? 0 : undefined}
+                max={name === 'slot_minutes' ? 240 : name === 'tax_percent' ? 100 : undefined}
+                step={name === 'slot_minutes' ? 1 : name === 'tax_percent' ? 0.01 : undefined}
+                maxLength={name === 'currency' ? 10 : name === 'clinic_phone' ? 40 : name === 'clinic_name' ? 150 : 255}
                 style={inputStyle}
                 value={form[name] ?? ''}
                 onChange={(e) => setForm((current) => ({ ...current, [name]: e.target.value }))}

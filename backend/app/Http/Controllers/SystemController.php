@@ -7,7 +7,6 @@ use App\Models\Doctor;
 use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\Patient;
-use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,7 +33,7 @@ class SystemController extends Controller
             'role_permissions' => config('roles.module_permissions'),
             'lookups' => [
                 'patients' => Patient::orderBy('created_at', 'desc')->get([
-                    'id', 'full_name', 'phone', 'gender', 'age', 'address',
+                    'id', 'full_name', 'phone', 'gender', 'age', 'address', 'status', 'assigned_doctor_id',
                 ]),
                 'doctors' => Doctor::where('status', 'Active')->orderBy('full_name')->get([
                     'id', 'full_name', 'specialization', 'phone', 'consultation_fee',
@@ -45,7 +44,6 @@ class SystemController extends Controller
                 'lab_tests' => LabTest::where('status', 'Active')->orderBy('test_name')->get([
                     'id', 'test_name', 'category', 'price', 'sample_type',
                 ]),
-                'treatments' => Treatment::latest('treatment_date')->get(['id', 'patient_id', 'treatment_name']),
                 'appointments' => Appointment::latest('appointment_date')->get(['id', 'patient_id', 'appointment_date']),
                 'users' => User::orderBy('full_name')->get(['id', 'full_name', 'role', 'status']),
                 'doctor_users' => User::where('role', 'Doctor')->where('status', 'Active')

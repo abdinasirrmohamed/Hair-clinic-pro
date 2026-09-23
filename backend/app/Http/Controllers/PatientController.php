@@ -44,19 +44,21 @@ class PatientController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'full_name' => 'required|string',
-            'phone' => 'required|string',
+            'full_name' => 'required|string|max:150',
+            'phone' => 'required|string|max:30',
             'gender' => ['required', Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
-            'email' => 'nullable|email',
-            'date_of_birth' => 'nullable|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
-            'address' => 'nullable|string',
+            'email' => 'nullable|email|max:150',
+            'date_of_birth' => 'required|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
+            'address' => 'required|string|max:255',
             'medical_notes' => 'nullable|string',
-            'assigned_doctor_id' => 'nullable|exists:doctors,id'
-        ]);
+            'assigned_doctor_id' => 'integer|required|exists:doctors,id',
+            'status' => 'prohibited',
+        ], $this->registrationMessages());
         $validated['age'] = $this->resolveAge($validated['date_of_birth'] ?? null, $validated['age'] ?? null);
 
         if (auth()->user()->role === 'Doctor') {
+            abort_unless(auth()->user()->doctor, 422, 'Your account must have a doctor profile before registering patients.');
             $validated['assigned_doctor_id'] = auth()->user()->doctor?->id;
         }
 
@@ -72,7 +74,7 @@ class PatientController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $patient->load(['appointments.doctor', 'treatments', 'followups', 'payments', 'prescriptions']);
+        $patient->load(['appointments.doctor', 'followups', 'payments', 'prescriptions']);
         return response()->json($patient);
     }
 
@@ -114,16 +116,6 @@ class PatientController extends Controller
             ]);
         });
 
-        $patient->treatments()->get()->each(function ($treatment) use ($events) {
-            $events->push([
-                'date' => $treatment->treatment_date,
-                'type' => 'Treatment',
-                'title' => $treatment->treatment_name,
-                'description' => $treatment->progress,
-                'amount' => $treatment->cost,
-            ]);
-        });
-
         LabRequest::with('test')->where('patient_id', $patient->id)->get()->each(function ($lab) use ($events) {
             $events->push([
                 'date' => $lab->request_date,
@@ -147,16 +139,20 @@ class PatientController extends Controller
         }
 
         $validated = $request->validate([
-            'full_name' => 'string',
-            'phone' => 'string',
+            'full_name' => 'string|max:150',
+            'phone' => 'string|max:30',
             'gender' => [Rule::in(['Male', 'Female'])],
             'age' => 'nullable|integer|min:0|max:120',
-            'email' => 'nullable|email',
-            'date_of_birth' => 'nullable|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
-            'address' => 'nullable|string',
+            'email' => 'nullable|email|max:150',
+            'date_of_birth' => 'sometimes|required|date|before_or_equal:today|after_or_equal:' . now()->subYears(121)->toDateString(),
+            'address' => 'sometimes|required|string|max:255',
             'medical_notes' => 'nullable|string',
-            'assigned_doctor_id' => 'nullable|exists:doctors,id'
-        ]);
+            'assigned_doctor_id' => 'integer|sometimes|required|exists:doctors,id',
+            'status' => ['sometimes', 'required', Rule::in(['Pending', 'Accepted', 'Approved'])],
+        ], $this->registrationMessages());
+        if (isset($validated['status']) && $validated['status'] !== $patient->status) {
+            abort_unless(in_array(auth()->user()->role, ['Administrator', 'Doctor'], true), 403, 'Only a doctor or administrator can change patient approval status.');
+        }
         if ($request->exists('date_of_birth')) {
             $validated['age'] = $this->resolveAge($validated['date_of_birth'] ?? null, null);
         } elseif ($patient->date_of_birth) {
@@ -186,5 +182,16 @@ class PatientController extends Controller
         return $dateOfBirth
             ? Carbon::parse($dateOfBirth)->startOfDay()->age
             : $fallbackAge;
+    }
+
+    private function registrationMessages(): array
+    {
+        return [
+            'date_of_birth.required' => 'Date of Birth is required.',
+            'address.required' => 'Address is required.',
+            'assigned_doctor_id.required' => 'Assigned Doctor is required.',
+            'assigned_doctor_id.exists' => 'Please select a valid Assigned Doctor.',
+            'status.prohibited' => 'New patients start as Pending and must be approved after registration.',
+        ];
     }
 }

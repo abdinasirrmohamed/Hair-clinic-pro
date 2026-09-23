@@ -40,9 +40,13 @@ class User extends Authenticatable
 
     public function effectiveModulePermissions(): array
     {
-        return is_array($this->module_permissions)
+        $permissions = is_array($this->module_permissions)
             ? $this->module_permissions
             : (config('roles.module_permissions')[$this->role] ?? []);
+
+        $available = array_merge(...array_values(config('roles.module_permissions', [])));
+
+        return array_values(array_intersect($permissions, $available));
     }
 
     public function getProfilePhotoUrlAttribute(): ?string

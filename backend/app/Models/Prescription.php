@@ -20,7 +20,14 @@ class Prescription extends Model
         'prescription_date',
         'status',
         'instructions',
+        'customer_id',
+        'prescriber_name',
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(PharmacyCustomer::class, 'customer_id');
+    }
 
     public function patient()
     {

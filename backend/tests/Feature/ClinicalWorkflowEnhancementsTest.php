@@ -163,7 +163,7 @@ class ClinicalWorkflowEnhancementsTest extends TestCase
     public function test_prescription_saves_and_returns_multiple_complete_medicine_rows(): void
     {
         $doctor = $this->doctor();
-        $patient = Patient::create(['full_name' => 'Multi Medicine', 'phone' => '1', 'gender' => 'Female']);
+        $patient = Patient::create(['full_name' => 'Multi Medicine', 'phone' => '1', 'gender' => 'Female', 'status' => 'Approved']);
         $first = $this->medicine('Medicine A');
         $second = $this->medicine('Medicine B');
 
@@ -188,7 +188,7 @@ class ClinicalWorkflowEnhancementsTest extends TestCase
     public function test_pharmacy_sale_only_dispenses_items_from_the_selected_patients_prescription(): void
     {
         $doctor = $this->doctor();
-        $patient = Patient::create(['full_name' => 'Pharmacy Patient', 'phone' => '2', 'gender' => 'Male']);
+        $patient = Patient::create(['full_name' => 'Pharmacy Patient', 'phone' => '2', 'gender' => 'Male', 'status' => 'Approved']);
         $medicine = $this->medicine('Prescription Sale Medicine');
         $prescription = $this->actingAs($this->admin, 'sanctum')->postJson('/api/prescriptions', [
             'patient_id' => $patient->id,

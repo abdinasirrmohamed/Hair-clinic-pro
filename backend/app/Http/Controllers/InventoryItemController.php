@@ -18,11 +18,11 @@ class InventoryItemController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'item_name' => 'required|string',
-            'category' => 'required|string',
-            'stock_level' => 'integer|min:0',
-            'unit_price' => 'numeric|min:0',
-            'vendor' => 'required|string',
+            'item_name' => 'required|string|max:150',
+            'category' => 'required|string|max:80',
+            'stock_level' => 'integer|min:0|max:2147483647',
+            'unit_price' => 'numeric|decimal:0,2|min:0|max:99999999.99',
+            'vendor' => 'required|string|max:150',
             'status' => ['required', Rule::in(['In Stock', 'Low Stock', 'Out of Stock'])],
         ]);
 
@@ -40,11 +40,11 @@ class InventoryItemController extends Controller
     public function update(Request $request, InventoryItem $item): JsonResponse
     {
         $validated = $request->validate([
-            'item_name' => 'string',
-            'category' => 'string',
-            'stock_level' => 'integer|min:0',
-            'unit_price' => 'numeric|min:0',
-            'vendor' => 'string',
+            'item_name' => 'string|max:150',
+            'category' => 'string|max:80',
+            'stock_level' => 'integer|min:0|max:2147483647',
+            'unit_price' => 'numeric|decimal:0,2|min:0|max:99999999.99',
+            'vendor' => 'string|max:150',
             'status' => [Rule::in(['In Stock', 'Low Stock', 'Out of Stock'])],
         ]);
 

@@ -1,6 +1,6 @@
 import PasswordInput from './PasswordInput';
 
-export default function FormField({ definition, value, onChange, lookups }) {
+export default function FormField({ definition, value, onChange, lookups, error }) {
   if (definition.type === 'hidden') return null;
 
   const inputStyle = {
@@ -36,6 +36,9 @@ export default function FormField({ definition, value, onChange, lookups }) {
     required: definition.required,
     disabled: definition.disabled,
     readOnly: definition.readOnly,
+    maxLength: definition.maxLength,
+    'aria-invalid': Boolean(error),
+    'aria-describedby': error ? `error-${definition.name}` : undefined,
   };
 
   let input;
@@ -53,6 +56,8 @@ export default function FormField({ definition, value, onChange, lookups }) {
     input = (
       <input
         type="file"
+        accept={definition.accept}
+        required={definition.required}
         name={definition.name}
         id={`field-${definition.name}`}
         onChange={onChange}
@@ -77,7 +82,7 @@ export default function FormField({ definition, value, onChange, lookups }) {
         <option value="">Select…</option>
         {lookupRows.map((row) => (
           <option key={row.id} value={row.id}>
-            {row.full_name ?? row.medicine_name ?? row.treatment_name ?? `#${row.id} — ${row.appointment_date ?? ''}`}
+            {row.full_name ?? row.medicine_name ?? `#${row.id} — ${row.appointment_date ?? ''}`}
           </option>
         ))}
       </select>
@@ -106,8 +111,10 @@ export default function FormField({ definition, value, onChange, lookups }) {
         style={{ color: 'var(--clr-section)' }}
       >
         {definition.label}
+        {definition.required && <span aria-label="required"> *</span>}
       </label>
       {input}
+      {error && <p id={`error-${definition.name}`} role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }

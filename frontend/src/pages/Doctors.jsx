@@ -87,6 +87,15 @@ function ScheduleModal({ doctor, onClose }) {
   };
 
   const save = async () => {
+    const keys = schedules.map((row) => `${row.day_of_week}|${row.shift}`);
+    if (!schedules.length || new Set(keys).size !== keys.length) return setError('Add at least one schedule. Each working day and shift must be unique.');
+    for (const row of schedules) {
+      const start = new Date(`2000-01-01T${row.start_time}:00`);
+      const end = new Date(`2000-01-01T${row.end_time}:00`);
+      if (!row.start_time || !row.end_time || !Number.isInteger(Number(row.slot_minutes)) || row.slot_minutes < 5 || row.slot_minutes > 240 || (end - start) / 60000 < row.slot_minutes) {
+        return setError('Each shift needs valid start/end times and a whole-number slot length of 5–240 minutes that fits within the shift.');
+      }
+    }
     setSaving(true);
     setError('');
     try {

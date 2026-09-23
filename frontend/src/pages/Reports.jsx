@@ -414,7 +414,7 @@ export default function Reports() {
               />
               <DataPanel
                 title="Patient Visit History"
-                columns={['Appointment #', 'Patient', 'Doctor', 'Date', 'Time', 'Service', 'Treatment', 'Medicines', 'Lab Tests']}
+                columns={['Appointment #', 'Patient', 'Doctor', 'Date', 'Time', 'Service', 'Medicines', 'Lab Tests']}
                 rows={(data?.visit_history ?? []).map((row) => [
                   row.appointment_id,
                   row.patient,
@@ -422,7 +422,6 @@ export default function Reports() {
                   row.date,
                   row.time,
                   row.service,
-                  row.treatments,
                   row.medicines,
                   row.lab_tests,
                 ])}
@@ -467,13 +466,12 @@ export default function Reports() {
             <>
               <DataPanel
                 title="Patient Reports"
-                columns={['Patient', 'Phone', 'Visits', 'Appointments', 'Treatments', 'Prescriptions', 'Lab Tests', 'Payments']}
+                columns={['Patient', 'Phone', 'Visits', 'Appointments', 'Prescriptions', 'Lab Tests', 'Payments']}
                 rows={(data?.patient_reports ?? []).map((row) => [
                   row.patient,
                   row.phone,
                   row.visits,
                   row.appointments_count,
-                  row.treatments,
                   row.prescriptions,
                   row.lab_tests,
                   money(row.payments),

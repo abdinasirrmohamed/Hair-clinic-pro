@@ -14,6 +14,7 @@ class Medicine extends Model
     const UPDATED_AT = null;
 
     protected $fillable = [
+        'batch_group_id',
         'medicine_name',
         'generic_name',
         'brand',

@@ -7,7 +7,7 @@ export default function Followups() {
   return (
     <CrudPage
       title="Follow-Ups"
-      subtitle="Post-treatment reviews and care schedule."
+      subtitle="Patient reviews and follow-up care schedule."
       config={modules.followups}
       lookups={lookups}
       onDataChanged={refresh}

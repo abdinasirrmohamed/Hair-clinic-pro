@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import Alert from '../components/ui/Alert';
 import PasswordInput from '../components/ui/PasswordInput';
+import { passwordPattern, passwordHelp } from '../utils/validation';
 import { initials } from '../utils/formatters';
 
 export default function Profile() {
@@ -152,6 +153,7 @@ export default function Profile() {
               <PasswordInput
                 style={inputStyle}
                 value={form.old_password}
+                required={Boolean(form.password)}
                 onChange={(e) => setForm({ ...form, old_password: e.target.value })}
                 onFocus={(e) => Object.assign(e.target.style, focusStyle)}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--clr-border)'; e.target.style.boxShadow = 'none'; }}
@@ -165,6 +167,9 @@ export default function Profile() {
               <PasswordInput
                 style={inputStyle}
                 value={form.password}
+                minLength={8}
+                pattern={passwordPattern}
+                title={passwordHelp}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 onFocus={(e) => Object.assign(e.target.style, focusStyle)}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--clr-border)'; e.target.style.boxShadow = 'none'; }}

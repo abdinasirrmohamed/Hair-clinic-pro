@@ -30,6 +30,8 @@ class PatientAndPaymentValidationTest extends TestCase
             'phone' => '0612345678',
             'gender' => 'Female',
             'date_of_birth' => $dateOfBirth,
+            'address' => 'Mogadishu',
+            'assigned_doctor_id' => Doctor::create(['full_name' => 'Registration Doctor', 'specialization' => 'General', 'phone' => '1', 'license_number' => 'REG-1'])->id,
             'age' => 7,
         ])->assertCreated();
 

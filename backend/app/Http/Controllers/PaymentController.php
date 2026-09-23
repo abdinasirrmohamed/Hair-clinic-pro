@@ -40,12 +40,12 @@ class PaymentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'appointment_id' => 'nullable|exists:appointments,id',
+            'patient_id' => 'integer|required|exists:patients,id',
+            'appointment_id' => 'integer|nullable|exists:appointments,id',
             'amount' => 'required|numeric|decimal:0,2|min:0.01|max:99999999.99',
             'payment_method' => ['required', Rule::in(['Cash', 'Card', 'EVC Plus', 'Zaad', 'Sahal', 'Bank Transfer'])],
             'payment_status' => ['required', Rule::in(['Paid', 'Partial', 'Outstanding'])],
-            'reference_number' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
             'account_no' => 'nullable|required_if:payment_method,EVC Plus|required_if:payment_method,Zaad|required_if:payment_method,Sahal|string|max:30',
             'notes' => 'nullable|string',
         ]);
