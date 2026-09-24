@@ -13,9 +13,22 @@ use Illuminate\Validation\Rule;
 
 class TreatmentController extends Controller
 {
+    private function authorizePatient(int $patientId): void
+    {
+        if (auth()->user()->role === 'Doctor') {
+            abort_unless(\App\Models\Patient::whereKey($patientId)
+                ->where('assigned_doctor_id', auth()->user()->doctor?->id ?? 0)->exists(), 403, 'This patient is not assigned to you.');
+        }
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = Treatment::with('patient');
+        if ($request->filled('search')) {
+            $search = $request->string('search')->toString();
+            $query->where(fn ($q) => $q->where('treatment_name', 'like', "%{$search}%")
+                ->orWhereHas('patient', fn ($p) => $p->where('full_name', 'like', "%{$search}%")));
+        }
 
         if (auth()->user()->role === 'Doctor') {
             $query->whereHas('patient', function ($q) {
@@ -30,22 +43,24 @@ class TreatmentController extends Controller
     {
         $validated = $request->validate([
             'patient_id' => 'integer|required|exists:patients,id',
-            'treatment_name' => 'required|string',
+            'treatment_name' => 'required|string|max:150',
             'treatment_date' => 'required|date',
             'treatment_stage' => ['required', Rule::in(['Pre-Treatment Evaluation', 'Surgery', 'Post-Treatment Review'])],
             'progress' => ['required', Rule::in(['Started', 'In Progress', 'Completed'])],
-            'cost' => 'required|numeric',
-            'grafts_planned' => 'nullable|integer',
-            'grafts_extracted' => 'nullable|integer',
-            'grafts_implanted' => 'nullable|integer',
-            'donor_area_status' => 'nullable|string',
-            'recipient_area_status' => 'nullable|string',
+            'cost' => 'required|numeric|min:0|max:99999999.99',
+            'grafts_planned' => 'nullable|integer|min:0|max:2147483647',
+            'grafts_extracted' => 'nullable|integer|min:0|max:2147483647',
+            'grafts_implanted' => 'nullable|integer|min:0|max:2147483647',
+            'donor_area_status' => 'nullable|string|max:255',
+            'recipient_area_status' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'usage_medicine_id' => 'integer|nullable|exists:medicines,id',
             'usage_quantity' => 'nullable|integer|min:1',
             'pre_op_photo' => 'nullable|image|max:3072',
             'post_op_photo' => 'nullable|image|max:3072',
         ]);
+
+        $this->authorizePatient($validated['patient_id']);
 
         if ($request->hasFile('pre_op_photo')) {
             $validated['pre_op_photo'] = $request->file('pre_op_photo')->store('treatments', 'public');
@@ -90,20 +105,30 @@ class TreatmentController extends Controller
 
     public function show(Treatment $treatment): JsonResponse
     {
+        $this->authorizePatient($treatment->patient_id);
         $treatment->load(['patient', 'followups']);
         return response()->json($treatment);
     }
 
     public function update(Request $request, Treatment $treatment): JsonResponse
     {
+        $this->authorizePatient($treatment->patient_id);
         $validated = $request->validate([
-            'treatment_name' => 'string',
+            'patient_id' => 'sometimes|required|integer|exists:patients,id',
+            'treatment_name' => 'sometimes|required|string|max:150',
+            'treatment_date' => 'sometimes|required|date',
             'treatment_stage' => [Rule::in(['Pre-Treatment Evaluation', 'Surgery', 'Post-Treatment Review'])],
             'progress' => [Rule::in(['Started', 'In Progress', 'Completed'])],
-            'cost' => 'numeric',
+            'cost' => 'numeric|min:0|max:99999999.99',
+            'grafts_planned' => 'nullable|integer|min:0|max:2147483647',
+            'grafts_extracted' => 'nullable|integer|min:0|max:2147483647',
+            'grafts_implanted' => 'nullable|integer|min:0|max:2147483647',
+            'donor_area_status' => 'nullable|string|max:255',
+            'recipient_area_status' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ]);
 
+        $this->authorizePatient($validated['patient_id'] ?? $treatment->patient_id);
         $treatment->update($validated);
         AuditLogService::log('Updated treatment', 'Treatments', $treatment->id);
 
@@ -112,6 +137,7 @@ class TreatmentController extends Controller
 
     public function destroy(Treatment $treatment): JsonResponse
     {
+        $this->authorizePatient($treatment->patient_id);
         $treatment->delete();
         AuditLogService::log('Deleted treatment', 'Treatments', $treatment->id);
         return response()->json(null, 204);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api, { asRows } from '../api';
@@ -11,13 +12,15 @@ const approved = (patient) => ['Accepted', 'Approved'].includes(patient?.status)
 
 export default function Prescriptions() {
   const { lookups, refresh } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialPatient = lookups?.patients?.find((row) => String(row.id) === searchParams.get('patient_id'));
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ patient_id: '', doctor_id: '', medicines: [emptyMedicine()] });
+  const [form, setForm] = useState({ patient_id: initialPatient?.id ?? '', doctor_id: initialPatient?.assigned_doctor_id ?? '', medicines: [emptyMedicine()] });
   const patient = lookups?.patients?.find((row) => String(row.id) === String(form.patient_id));
   const canPrescribe = approved(patient);
 
@@ -92,7 +95,7 @@ export default function Prescriptions() {
           {[['patient_id', 'Patient', lookups?.patients ?? []], ['doctor_id', 'Doctor', lookups?.doctors ?? []]].map(([key, label, options]) => (
             <label key={key} className="space-y-1">
               <span className="text-xs font-semibold" style={{ color: 'var(--clr-muted)' }}>{label}</span>
-              <select required className={inputClass} style={inputStyle} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value, ...(key === 'patient_id' ? { medicines: [emptyMedicine()] } : {}) })}>
+              <select required className={inputClass} style={inputStyle} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value, ...(key === 'patient_id' ? { doctor_id: lookups?.patients?.find((row) => String(row.id) === e.target.value)?.assigned_doctor_id ?? '', medicines: [emptyMedicine()] } : {}) })}>
                 <option value="">Select {label.toLowerCase()}</option>
                 {options.map((option) => <option key={option.id} value={option.id}>{option.full_name}{key === 'patient_id' ? ` (${option.status ?? 'Pending'})` : ''}</option>)}
               </select>

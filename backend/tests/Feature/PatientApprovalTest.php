@@ -104,7 +104,13 @@ class PatientApprovalTest extends TestCase
         $doctorUser = User::factory()->create(['role' => 'Doctor']);
         $this->doctor->update(['user_id' => $doctorUser->id]);
         $this->actingAs($doctorUser, 'sanctum');
+        $this->getJson('/api/patients')->assertOk()->assertJsonPath('data.0.id', $patient->id);
+        $this->postJson('/api/prescriptions', $this->prescription($patient))
+            ->assertUnprocessable()->assertJsonValidationErrors('patient_id');
         $this->putJson('/api/patients/'.$patient->id, ['status' => 'Accepted'])->assertOk()->assertJsonPath('status', 'Accepted');
+        $this->postJson('/api/prescriptions', $this->prescription($patient))->assertCreated()
+            ->assertJsonPath('prescription.patient_id', $patient->id)
+            ->assertJsonPath('prescription.doctor_id', $this->doctor->id);
         $this->actingAs(User::factory()->create(['role' => 'Doctor']), 'sanctum');
         $this->putJson('/api/patients/'.$patient->id, ['status' => 'Pending'])->assertForbidden();
     }

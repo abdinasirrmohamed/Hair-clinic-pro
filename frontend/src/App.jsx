@@ -8,6 +8,7 @@ import { PageLoader } from './components/ui/LoadingSpinner';
 import Login              from './pages/Login';
 import Dashboard          from './pages/Dashboard';
 import Patients           from './pages/Patients';
+import Treatments         from './pages/Treatments';
 import Doctors            from './pages/Doctors';
 import Users              from './pages/Users';
 import Appointments       from './pages/Appointments';
@@ -74,6 +75,7 @@ export default function App() {
         <Route index element={<HomeRedirect />} />
         <Route path="dashboard"          element={<Dashboard />} />
         <Route path="patients"           element={<Patients />} />
+        <Route path="treatments"         element={<Treatments />} />
         <Route path="doctors"            element={<Doctors />} />
         <Route path="users"              element={<Users />} />
         <Route path="appointments"       element={<Appointments />} />

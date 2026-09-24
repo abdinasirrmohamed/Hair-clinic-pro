@@ -22,6 +22,7 @@ const moduleLabels = {
   finance: 'Finance',
   audit_logs: 'Audit Logs',
   followups: 'Follow-Ups',
+  treatments: 'Treatment Plan',
   inventory: 'Inventory',
   pharmacy: 'Pharmacy',
   prescriptions: 'Prescriptions',

@@ -9,6 +9,7 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DoctorAppointmentController;
 use App\Http\Controllers\FollowupController;
+use App\Http\Controllers\TreatmentController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ExpenseController;
@@ -91,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Followups
     Route::middleware('module:followups')->apiResource('followups', FollowupController::class);
+    Route::middleware('module:treatments')->apiResource('treatments', TreatmentController::class);
 
     // Prescriptions
     Route::middleware('module:prescriptions')->group(function () {

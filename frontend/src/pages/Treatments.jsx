@@ -6,7 +6,7 @@ export default function Treatments() {
   const { lookups, refresh } = useAuth();
   return (
     <CrudPage
-      title="Treatments"
+      title="Treatment Plan"
       subtitle="Treatment plans, progress, and operation records."
       config={modules.treatments}
       lookups={lookups}

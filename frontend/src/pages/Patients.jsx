@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CrudPage from '../components/crud/CrudPage';
@@ -10,6 +11,8 @@ import api from '../api';
 import { money } from '../utils/formatters';
 
 export default function Patients() {
+  const navigate = useNavigate();
+  const [accepting, setAccepting] = useState(null);
   const { lookups, refresh, user } = useAuth();
   const canApprove = ['Administrator', 'Doctor'].includes(user?.role);
   const patientConfig = {
@@ -24,6 +27,20 @@ export default function Patients() {
   const [timeline, setTimeline] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const acceptPatient = async (patient) => {
+    setAccepting(patient.id);
+    setError('');
+    try {
+      await api.put(`/patients/${patient.id}`, { status: 'Accepted' });
+      await refresh();
+      navigate(`/prescriptions?patient_id=${patient.id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAccepting(null);
+    }
+  };
 
   const openTimeline = async (patient) => {
     setLoading(true);
@@ -43,11 +60,19 @@ export default function Patients() {
       {error && <div className="mb-4"><Alert message={error} /></div>}
       <CrudPage
         title="Patient Management"
-        subtitle="Manage records, medical history, and scheduled sessions."
+        subtitle="New patients are Pending. Accept the assigned patient before writing a prescription."
         config={patientConfig}
         lookups={lookups}
         onDataChanged={refresh}
         renderActions={(row) => (
+          <>
+          {canApprove && (row.status === 'Pending' ? (
+            <button disabled={accepting !== null} onClick={() => acceptPatient(row)} className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50" style={{ background: 'var(--clr-accent)' }}>
+              {accepting === row.id ? 'Accepting...' : 'Accept Patient'}
+            </button>
+          ) : ['Accepted', 'Approved'].includes(row.status) && (
+            <button onClick={() => navigate(`/prescriptions?patient_id=${row.id}`)} className="px-3 py-2 rounded-lg text-xs font-semibold" style={{ color: 'var(--clr-accent)' }}>Write Prescription</button>
+          ))}
           <button
             onClick={() => openTimeline(row)}
             title="Patient timeline"
@@ -58,6 +83,7 @@ export default function Patients() {
           >
             <Clock size={14} />
           </button>
+          </>
         )}
       />
 

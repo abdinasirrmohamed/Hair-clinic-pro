@@ -1,9 +1,9 @@
 <?php
 return [
     'module_permissions' => [
-        'Administrator' => ['dashboard','users','doctors','patients','appointments','doctor_appointments','payments','finance','audit_logs','followups','inventory','pharmacy','prescriptions','laboratory','reports','settings'],
+        'Administrator' => ['dashboard','users','doctors','patients','appointments','doctor_appointments','payments','finance','audit_logs','treatments','followups','inventory','pharmacy','prescriptions','laboratory','reports','settings'],
         'Receptionist' => ['dashboard','patients','appointments','payments','reports'],
-        'Doctor' => ['dashboard','patients','doctor_appointments','followups','prescriptions','reports'],
+        'Doctor' => ['dashboard','patients','doctor_appointments','treatments','followups','prescriptions','reports'],
         'Inventory Officer' => ['dashboard','inventory'],
         'Pharmacy User' => ['dashboard','inventory','pharmacy','prescriptions','reports'],
         'Lab User' => ['dashboard','patients','appointments','laboratory','reports'],

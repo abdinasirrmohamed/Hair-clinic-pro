@@ -23,6 +23,7 @@ const NAV_GROUPS = [
       { path: '/doctors',             module: 'doctors',             label: 'Doctors',          icon: Stethoscope },
       { path: '/appointments',        module: 'appointments',        label: 'Appointments',     icon: Calendar },
       { path: '/doctor-appointments', module: 'doctor_appointments', label: 'My Appointments',  icon: CalendarCheck },
+      { path: '/treatments',          module: 'treatments',          label: 'Treatment Plan',   icon: ClipboardList },
       { path: '/followups',           module: 'followups',           label: 'Follow-Ups',       icon: ClipboardList },
       { path: '/prescriptions',       module: 'prescriptions',       label: 'Prescriptions',    icon: FileText },
     ],
